@@ -66,10 +66,6 @@
       if (!('left' in options)) {
         this.left = this.minX;
       }
-      this.pathOffset = {
-        x: this.minX + this.width / 2,
-        y: this.minY + this.height / 2
-      };
     },
 
     /**
@@ -91,6 +87,18 @@
     },
 
     /**
+     * @private
+     */
+    _applyPointOffset: function() {
+      // change points to offset polygon into a bounding box
+      // executed one time
+      this.points.forEach(function(p) {
+        p.x -= (this.minX + this.width / 2);
+        p.y -= (this.minY + this.height / 2);
+      }, this);
+    },
+
+    /**
      * Returns object representation of an instance
      * @param {Array} [propertiesToInclude] Any properties that you might want to additionally include in the output
      * @return {Object} Object representation of an instance
@@ -108,20 +116,18 @@
      * @return {String} svg representation of an instance
      */
     toSVG: function(reviver) {
-      var points = [], addTransform,
+      var points = [],
           markup = this._createBaseSVGMarkup();
 
       for (var i = 0, len = this.points.length; i < len; i++) {
         points.push(toFixed(this.points[i].x, 2), ',', toFixed(this.points[i].y, 2), ' ');
       }
-      if (!(this.group && this.group.type === 'path-group')) {
-        addTransform = ' translate(' + (-this.pathOffset.x) + ', ' + (-this.pathOffset.y) + ') ';
-      }
+
       markup.push(
         '<', this.type, ' ',
           'points="', points.join(''),
           '" style="', this.getSvgStyles(),
-          '" transform="', this.getSvgTransform(), addTransform,
+          '" transform="', this.getSvgTransform(),
           ' ', this.getSvgTransformMatrix(),
         '"/>\n'
       );
@@ -134,8 +140,8 @@
      * @private
      * @param {CanvasRenderingContext2D} ctx Context to render on
      */
-    _render: function(ctx, noTransform) {
-      if (!this.commonRender(ctx, noTransform)) {
+    _render: function(ctx) {
+      if (!this.commonRender(ctx)) {
         return;
       }
       this._renderFill(ctx);
@@ -149,7 +155,7 @@
      * @private
      * @param {CanvasRenderingContext2D} ctx Context to render on
      */
-    commonRender: function(ctx, noTransform) {
+    commonRender: function(ctx) {
       var point, len = this.points.length;
 
       if (!len || isNaN(this.points[len - 1].y)) {
@@ -158,8 +164,15 @@
         return false;
       }
 
-      noTransform || ctx.translate(-this.pathOffset.x, -this.pathOffset.y);
       ctx.beginPath();
+
+      if (this._applyPointOffset) {
+        if (!(this.group && this.group.type === 'path-group')) {
+          this._applyPointOffset();
+        }
+        this._applyPointOffset = null;
+      }
+
       ctx.moveTo(this.points[0].x, this.points[0].y);
       for (var i = 0; i < len; i++) {
         point = this.points[i];

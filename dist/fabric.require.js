@@ -1,5 +1,5 @@
 var fabric = fabric || {
-    version: "1.6.0-rc.1"
+    version: "1.6.0"
 };
 
 if (typeof exports !== "undefined") {
@@ -32,6 +32,1709 @@ fabric.reNum = "(?:[-+]?(?:\\d+|\\d*\\.\\d+)(?:e[-+]?\\d+)?)";
 fabric.fontPaths = {};
 
 fabric.devicePixelRatio = fabric.window.devicePixelRatio || fabric.window.webkitDevicePixelRatio || fabric.window.mozDevicePixelRatio || 1;
+
+if (typeof JSON !== "object") {
+    JSON = {};
+}
+
+(function() {
+    "use strict";
+    function f(n) {
+        return n < 10 ? "0" + n : n;
+    }
+    if (typeof Date.prototype.toJSON !== "function") {
+        Date.prototype.toJSON = function() {
+            return isFinite(this.valueOf()) ? this.getUTCFullYear() + "-" + f(this.getUTCMonth() + 1) + "-" + f(this.getUTCDate()) + "T" + f(this.getUTCHours()) + ":" + f(this.getUTCMinutes()) + ":" + f(this.getUTCSeconds()) + "Z" : null;
+        };
+        String.prototype.toJSON = Number.prototype.toJSON = Boolean.prototype.toJSON = function() {
+            return this.valueOf();
+        };
+    }
+    var cx, escapable, gap, indent, meta, rep;
+    function quote(string) {
+        escapable.lastIndex = 0;
+        return escapable.test(string) ? '"' + string.replace(escapable, function(a) {
+            var c = meta[a];
+            return typeof c === "string" ? c : "\\u" + ("0000" + a.charCodeAt(0).toString(16)).slice(-4);
+        }) + '"' : '"' + string + '"';
+    }
+    function str(key, holder) {
+        var i, k, v, length, mind = gap, partial, value = holder[key];
+        if (value && typeof value === "object" && typeof value.toJSON === "function") {
+            value = value.toJSON(key);
+        }
+        if (typeof rep === "function") {
+            value = rep.call(holder, key, value);
+        }
+        switch (typeof value) {
+          case "string":
+            return quote(value);
+
+          case "number":
+            return isFinite(value) ? String(value) : "null";
+
+          case "boolean":
+          case "null":
+            return String(value);
+
+          case "object":
+            if (!value) {
+                return "null";
+            }
+            gap += indent;
+            partial = [];
+            if (Object.prototype.toString.apply(value) === "[object Array]") {
+                length = value.length;
+                for (i = 0; i < length; i += 1) {
+                    partial[i] = str(i, value) || "null";
+                }
+                v = partial.length === 0 ? "[]" : gap ? "[\n" + gap + partial.join(",\n" + gap) + "\n" + mind + "]" : "[" + partial.join(",") + "]";
+                gap = mind;
+                return v;
+            }
+            if (rep && typeof rep === "object") {
+                length = rep.length;
+                for (i = 0; i < length; i += 1) {
+                    if (typeof rep[i] === "string") {
+                        k = rep[i];
+                        v = str(k, value);
+                        if (v) {
+                            partial.push(quote(k) + (gap ? ": " : ":") + v);
+                        }
+                    }
+                }
+            } else {
+                for (k in value) {
+                    if (Object.prototype.hasOwnProperty.call(value, k)) {
+                        v = str(k, value);
+                        if (v) {
+                            partial.push(quote(k) + (gap ? ": " : ":") + v);
+                        }
+                    }
+                }
+            }
+            v = partial.length === 0 ? "{}" : gap ? "{\n" + gap + partial.join(",\n" + gap) + "\n" + mind + "}" : "{" + partial.join(",") + "}";
+            gap = mind;
+            return v;
+        }
+    }
+    if (typeof JSON.stringify !== "function") {
+        escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
+        meta = {
+            "\b": "\\b",
+            "	": "\\t",
+            "\n": "\\n",
+            "\f": "\\f",
+            "\r": "\\r",
+            '"': '\\"',
+            "\\": "\\\\"
+        };
+        JSON.stringify = function(value, replacer, space) {
+            var i;
+            gap = "";
+            indent = "";
+            if (typeof space === "number") {
+                for (i = 0; i < space; i += 1) {
+                    indent += " ";
+                }
+            } else if (typeof space === "string") {
+                indent = space;
+            }
+            rep = replacer;
+            if (replacer && typeof replacer !== "function" && (typeof replacer !== "object" || typeof replacer.length !== "number")) {
+                throw new Error("JSON.stringify");
+            }
+            return str("", {
+                "": value
+            });
+        };
+    }
+    if (typeof JSON.parse !== "function") {
+        cx = /[\u0000\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
+        JSON.parse = function(text, reviver) {
+            var j;
+            function walk(holder, key) {
+                var k, v, value = holder[key];
+                if (value && typeof value === "object") {
+                    for (k in value) {
+                        if (Object.prototype.hasOwnProperty.call(value, k)) {
+                            v = walk(value, k);
+                            if (v !== undefined) {
+                                value[k] = v;
+                            } else {
+                                delete value[k];
+                            }
+                        }
+                    }
+                }
+                return reviver.call(holder, key, value);
+            }
+            text = String(text);
+            cx.lastIndex = 0;
+            if (cx.test(text)) {
+                text = text.replace(cx, function(a) {
+                    return "\\u" + ("0000" + a.charCodeAt(0).toString(16)).slice(-4);
+                });
+            }
+            if (/^[\],:{}\s]*$/.test(text.replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, "@").replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, "]").replace(/(?:^|:|,)(?:\s*\[)+/g, ""))) {
+                j = eval("(" + text + ")");
+                return typeof reviver === "function" ? walk({
+                    "": j
+                }, "") : j;
+            }
+            throw new SyntaxError("JSON.parse");
+        };
+    }
+})();
+
+if (typeof eventjs === "undefined") var eventjs = {};
+
+(function(root) {
+    "use strict";
+    root.modifyEventListener = false;
+    root.modifySelectors = false;
+    root.configure = function(conf) {
+        if (isFinite(conf.modifyEventListener)) root.modifyEventListener = conf.modifyEventListener;
+        if (isFinite(conf.modifySelectors)) root.modifySelectors = conf.modifySelectors;
+        if (eventListenersAgumented === false && root.modifyEventListener) {
+            augmentEventListeners();
+        }
+        if (selectorsAugmented === false && root.modifySelectors) {
+            augmentSelectors();
+        }
+    };
+    root.add = function(target, type, listener, configure) {
+        return eventManager(target, type, listener, configure, "add");
+    };
+    root.remove = function(target, type, listener, configure) {
+        return eventManager(target, type, listener, configure, "remove");
+    };
+    root.returnFalse = function(event) {
+        return false;
+    };
+    root.stop = function(event) {
+        if (!event) return;
+        if (event.stopPropagation) event.stopPropagation();
+        event.cancelBubble = true;
+        event.cancelBubbleCount = 0;
+    };
+    root.prevent = function(event) {
+        if (!event) return;
+        if (event.preventDefault) {
+            event.preventDefault();
+        } else if (event.preventManipulation) {
+            event.preventManipulation();
+        } else {
+            event.returnValue = false;
+        }
+    };
+    root.cancel = function(event) {
+        root.stop(event);
+        root.prevent(event);
+    };
+    root.blur = function() {
+        var node = document.activeElement;
+        if (!node) return;
+        var nodeName = document.activeElement.nodeName;
+        if (nodeName === "INPUT" || nodeName === "TEXTAREA" || node.contentEditable === "true") {
+            if (node.blur) node.blur();
+        }
+    };
+    root.getEventSupport = function(target, type) {
+        if (typeof target === "string") {
+            type = target;
+            target = window;
+        }
+        type = "on" + type;
+        if (type in target) return true;
+        if (!target.setAttribute) target = document.createElement("div");
+        if (target.setAttribute && target.removeAttribute) {
+            target.setAttribute(type, "");
+            var isSupported = typeof target[type] === "function";
+            if (typeof target[type] !== "undefined") target[type] = null;
+            target.removeAttribute(type);
+            return isSupported;
+        }
+    };
+    var clone = function(obj) {
+        if (!obj || typeof obj !== "object") return obj;
+        var temp = new obj.constructor();
+        for (var key in obj) {
+            if (!obj[key] || typeof obj[key] !== "object") {
+                temp[key] = obj[key];
+            } else {
+                temp[key] = clone(obj[key]);
+            }
+        }
+        return temp;
+    };
+    var eventManager = function(target, type, listener, configure, trigger, fromOverwrite) {
+        configure = configure || {};
+        if (String(target) === "[object Object]") {
+            var data = target;
+            target = data.target;
+            delete data.target;
+            if (data.type && data.listener) {
+                type = data.type;
+                delete data.type;
+                listener = data.listener;
+                delete data.listener;
+                for (var key in data) {
+                    configure[key] = data[key];
+                }
+            } else {
+                for (var param in data) {
+                    var value = data[param];
+                    if (typeof value === "function") continue;
+                    configure[param] = value;
+                }
+                var ret = {};
+                for (var key in data) {
+                    var param = key.split(",");
+                    var o = data[key];
+                    var conf = {};
+                    for (var k in configure) {
+                        conf[k] = configure[k];
+                    }
+                    if (typeof o === "function") {
+                        var listener = o;
+                    } else if (typeof o.listener === "function") {
+                        var listener = o.listener;
+                        for (var k in o) {
+                            if (typeof o[k] === "function") continue;
+                            conf[k] = o[k];
+                        }
+                    } else {
+                        continue;
+                    }
+                    for (var n = 0; n < param.length; n++) {
+                        ret[key] = eventjs.add(target, param[n], listener, conf, trigger);
+                    }
+                }
+                return ret;
+            }
+        }
+        if (!target || !type || !listener) return;
+        if (typeof target === "string" && type === "ready") {
+            if (window.eventjs_stallOnReady) {
+                type = "load";
+                target = window;
+            } else {
+                var time = new Date().getTime();
+                var timeout = configure.timeout;
+                var ms = configure.interval || 1e3 / 60;
+                var interval = window.setInterval(function() {
+                    if (new Date().getTime() - time > timeout) {
+                        window.clearInterval(interval);
+                    }
+                    if (document.querySelector(target)) {
+                        window.clearInterval(interval);
+                        setTimeout(listener, 1);
+                    }
+                }, ms);
+                return;
+            }
+        }
+        if (typeof target === "string") {
+            target = document.querySelectorAll(target);
+            if (target.length === 0) return createError("Missing target on listener!", arguments);
+            if (target.length === 1) {
+                target = target[0];
+            }
+        }
+        var event;
+        var events = {};
+        if (target.length > 0 && target !== window) {
+            for (var n0 = 0, length0 = target.length; n0 < length0; n0++) {
+                event = eventManager(target[n0], type, listener, clone(configure), trigger);
+                if (event) events[n0] = event;
+            }
+            return createBatchCommands(events);
+        }
+        if (typeof type === "string") {
+            type = type.toLowerCase();
+            if (type.indexOf(" ") !== -1) {
+                type = type.split(" ");
+            } else if (type.indexOf(",") !== -1) {
+                type = type.split(",");
+            }
+        }
+        if (typeof type !== "string") {
+            if (typeof type.length === "number") {
+                for (var n1 = 0, length1 = type.length; n1 < length1; n1++) {
+                    event = eventManager(target, type[n1], listener, clone(configure), trigger);
+                    if (event) events[type[n1]] = event;
+                }
+            } else {
+                for (var key in type) {
+                    if (typeof type[key] === "function") {
+                        event = eventManager(target, key, type[key], clone(configure), trigger);
+                    } else {
+                        event = eventManager(target, key, type[key].listener, clone(type[key]), trigger);
+                    }
+                    if (event) events[key] = event;
+                }
+            }
+            return createBatchCommands(events);
+        } else if (type.indexOf("on") === 0) {
+            type = type.substr(2);
+        }
+        if (typeof target !== "object") return createError("Target is not defined!", arguments);
+        if (typeof listener !== "function") return createError("Listener is not a function!", arguments);
+        var useCapture = configure.useCapture || false;
+        var id = getID(target) + "." + getID(listener) + "." + (useCapture ? 1 : 0);
+        if (root.Gesture && root.Gesture._gestureHandlers[type]) {
+            id = type + id;
+            if (trigger === "remove") {
+                if (!wrappers[id]) return;
+                wrappers[id].remove();
+                delete wrappers[id];
+            } else if (trigger === "add") {
+                if (wrappers[id]) {
+                    wrappers[id].add();
+                    return wrappers[id];
+                }
+                if (configure.useCall && !root.modifyEventListener) {
+                    var tmp = listener;
+                    listener = function(event, self) {
+                        for (var key in self) event[key] = self[key];
+                        return tmp.call(target, event);
+                    };
+                }
+                configure.gesture = type;
+                configure.target = target;
+                configure.listener = listener;
+                configure.fromOverwrite = fromOverwrite;
+                wrappers[id] = root.proxy[type](configure);
+            }
+            return wrappers[id];
+        } else {
+            var eventList = getEventList(type);
+            for (var n = 0, eventId; n < eventList.length; n++) {
+                type = eventList[n];
+                eventId = type + "." + id;
+                if (trigger === "remove") {
+                    if (!wrappers[eventId]) continue;
+                    target[remove](type, listener, useCapture);
+                    delete wrappers[eventId];
+                } else if (trigger === "add") {
+                    if (wrappers[eventId]) return wrappers[eventId];
+                    target[add](type, listener, useCapture);
+                    wrappers[eventId] = {
+                        id: eventId,
+                        type: type,
+                        target: target,
+                        listener: listener,
+                        remove: function() {
+                            for (var n = 0; n < eventList.length; n++) {
+                                root.remove(target, eventList[n], listener, configure);
+                            }
+                        }
+                    };
+                }
+            }
+            return wrappers[eventId];
+        }
+    };
+    var createBatchCommands = function(events) {
+        return {
+            remove: function() {
+                for (var key in events) {
+                    events[key].remove();
+                }
+            },
+            add: function() {
+                for (var key in events) {
+                    events[key].add();
+                }
+            }
+        };
+    };
+    var createError = function(message, data) {
+        if (typeof console === "undefined") return;
+        if (typeof console.error === "undefined") return;
+        console.error(message, data);
+    };
+    var pointerDefs = {
+        msPointer: [ "MSPointerDown", "MSPointerMove", "MSPointerUp" ],
+        touch: [ "touchstart", "touchmove", "touchend" ],
+        mouse: [ "mousedown", "mousemove", "mouseup" ]
+    };
+    var pointerDetect = {
+        MSPointerDown: 0,
+        MSPointerMove: 1,
+        MSPointerUp: 2,
+        touchstart: 0,
+        touchmove: 1,
+        touchend: 2,
+        mousedown: 0,
+        mousemove: 1,
+        mouseup: 2
+    };
+    var getEventSupport = function() {
+        root.supports = {};
+        if (window.navigator.msPointerEnabled) {
+            root.supports.msPointer = true;
+        }
+        if (root.getEventSupport("touchstart")) {
+            root.supports.touch = true;
+        }
+        if (root.getEventSupport("mousedown")) {
+            root.supports.mouse = true;
+        }
+    }();
+    var getEventList = function() {
+        return function(type) {
+            var prefix = document.addEventListener ? "" : "on";
+            var idx = pointerDetect[type];
+            if (isFinite(idx)) {
+                var types = [];
+                for (var key in root.supports) {
+                    types.push(prefix + pointerDefs[key][idx]);
+                }
+                return types;
+            } else {
+                return [ prefix + type ];
+            }
+        };
+    }();
+    var wrappers = {};
+    var counter = 0;
+    var getID = function(object) {
+        if (object === window) return "#window";
+        if (object === document) return "#document";
+        if (!object.uniqueID) object.uniqueID = "e" + counter++;
+        return object.uniqueID;
+    };
+    var add = document.addEventListener ? "addEventListener" : "attachEvent";
+    var remove = document.removeEventListener ? "removeEventListener" : "detachEvent";
+    root.createPointerEvent = function(event, self, preventRecord) {
+        var eventName = self.gesture;
+        var target = self.target;
+        var pts = event.changedTouches || root.proxy.getCoords(event);
+        if (pts.length) {
+            var pt = pts[0];
+            self.pointers = preventRecord ? [] : pts;
+            self.pageX = pt.pageX;
+            self.pageY = pt.pageY;
+            self.x = self.pageX;
+            self.y = self.pageY;
+        }
+        var newEvent = document.createEvent("Event");
+        newEvent.initEvent(eventName, true, true);
+        newEvent.originalEvent = event;
+        for (var k in self) {
+            if (k === "target") continue;
+            newEvent[k] = self[k];
+        }
+        var type = newEvent.type;
+        if (root.Gesture && root.Gesture._gestureHandlers[type]) {
+            self.oldListener.call(target, newEvent, self, false);
+        }
+    };
+    var eventListenersAgumented = false;
+    var augmentEventListeners = function() {
+        if (!window.HTMLElement) return;
+        var augmentEventListener = function(proto) {
+            var recall = function(trigger) {
+                var handle = trigger + "EventListener";
+                var handler = proto[handle];
+                proto[handle] = function(type, listener, useCapture) {
+                    if (root.Gesture && root.Gesture._gestureHandlers[type]) {
+                        var configure = useCapture;
+                        if (typeof useCapture === "object") {
+                            configure.useCall = true;
+                        } else {
+                            configure = {
+                                useCall: true,
+                                useCapture: useCapture
+                            };
+                        }
+                        eventManager(this, type, listener, configure, trigger, true);
+                    } else {
+                        var types = getEventList(type);
+                        for (var n = 0; n < types.length; n++) {
+                            handler.call(this, types[n], listener, useCapture);
+                        }
+                    }
+                };
+            };
+            recall("add");
+            recall("remove");
+        };
+        if (navigator.userAgent.match(/Firefox/)) {
+            augmentEventListener(HTMLDivElement.prototype);
+            augmentEventListener(HTMLCanvasElement.prototype);
+        } else {
+            augmentEventListener(HTMLElement.prototype);
+        }
+        augmentEventListener(document);
+        augmentEventListener(window);
+    };
+    var selectorsAugmented = false;
+    var augmentSelectors = function() {
+        var proto = NodeList.prototype;
+        proto.removeEventListener = function(type, listener, useCapture) {
+            for (var n = 0, length = this.length; n < length; n++) {
+                this[n].removeEventListener(type, listener, useCapture);
+            }
+        };
+        proto.addEventListener = function(type, listener, useCapture) {
+            for (var n = 0, length = this.length; n < length; n++) {
+                this[n].addEventListener(type, listener, useCapture);
+            }
+        };
+    };
+    return root;
+})(eventjs);
+
+if (typeof eventjs === "undefined") var eventjs = {};
+
+if (typeof eventjs.proxy === "undefined") eventjs.proxy = {};
+
+eventjs.proxy = function(root) {
+    "use strict";
+    root.pointerSetup = function(conf, self) {
+        conf.target = conf.target || window;
+        conf.doc = conf.target.ownerDocument || conf.target;
+        conf.minFingers = conf.minFingers || conf.fingers || 1;
+        conf.maxFingers = conf.maxFingers || conf.fingers || Infinity;
+        conf.position = conf.position || "relative";
+        delete conf.fingers;
+        self = self || {};
+        self.enabled = true;
+        self.gesture = conf.gesture;
+        self.target = conf.target;
+        self.env = conf.env;
+        if (eventjs.modifyEventListener && conf.fromOverwrite) {
+            conf.oldListener = conf.listener;
+            conf.listener = eventjs.createPointerEvent;
+        }
+        var fingers = 0;
+        var type = self.gesture.indexOf("pointer") === 0 && eventjs.modifyEventListener ? "pointer" : "mouse";
+        if (conf.oldListener) self.oldListener = conf.oldListener;
+        self.listener = conf.listener;
+        self.proxy = function(listener) {
+            self.defaultListener = conf.listener;
+            conf.listener = listener;
+            listener(conf.event, self);
+        };
+        self.add = function() {
+            if (self.enabled === true) return;
+            if (conf.onPointerDown) eventjs.add(conf.target, type + "down", conf.onPointerDown);
+            if (conf.onPointerMove) eventjs.add(conf.doc, type + "move", conf.onPointerMove);
+            if (conf.onPointerUp) eventjs.add(conf.doc, type + "up", conf.onPointerUp);
+            self.enabled = true;
+        };
+        self.remove = function() {
+            if (self.enabled === false) return;
+            if (conf.onPointerDown) eventjs.remove(conf.target, type + "down", conf.onPointerDown);
+            if (conf.onPointerMove) eventjs.remove(conf.doc, type + "move", conf.onPointerMove);
+            if (conf.onPointerUp) eventjs.remove(conf.doc, type + "up", conf.onPointerUp);
+            self.reset();
+            self.enabled = false;
+        };
+        self.pause = function(opt) {
+            if (conf.onPointerMove && (!opt || opt.move)) eventjs.remove(conf.doc, type + "move", conf.onPointerMove);
+            if (conf.onPointerUp && (!opt || opt.up)) eventjs.remove(conf.doc, type + "up", conf.onPointerUp);
+            fingers = conf.fingers;
+            conf.fingers = 0;
+        };
+        self.resume = function(opt) {
+            if (conf.onPointerMove && (!opt || opt.move)) eventjs.add(conf.doc, type + "move", conf.onPointerMove);
+            if (conf.onPointerUp && (!opt || opt.up)) eventjs.add(conf.doc, type + "up", conf.onPointerUp);
+            conf.fingers = fingers;
+        };
+        self.reset = function() {
+            conf.tracker = {};
+            conf.fingers = 0;
+        };
+        return self;
+    };
+    var sp = eventjs.supports;
+    eventjs.isMouse = !!sp.mouse;
+    eventjs.isMSPointer = !!sp.touch;
+    eventjs.isTouch = !!sp.msPointer;
+    root.pointerStart = function(event, self, conf) {
+        var type = (event.type || "mousedown").toUpperCase();
+        if (type.indexOf("MOUSE") === 0) {
+            eventjs.isMouse = true;
+            eventjs.isTouch = false;
+            eventjs.isMSPointer = false;
+        } else if (type.indexOf("TOUCH") === 0) {
+            eventjs.isMouse = false;
+            eventjs.isTouch = true;
+            eventjs.isMSPointer = false;
+        } else if (type.indexOf("MSPOINTER") === 0) {
+            eventjs.isMouse = false;
+            eventjs.isTouch = false;
+            eventjs.isMSPointer = true;
+        }
+        var addTouchStart = function(touch, sid) {
+            var bbox = conf.bbox;
+            var pt = track[sid] = {};
+            switch (conf.position) {
+              case "absolute":
+                pt.offsetX = 0;
+                pt.offsetY = 0;
+                break;
+
+              case "differenceFromLast":
+                pt.offsetX = touch.pageX;
+                pt.offsetY = touch.pageY;
+                break;
+
+              case "difference":
+                pt.offsetX = touch.pageX;
+                pt.offsetY = touch.pageY;
+                break;
+
+              case "move":
+                pt.offsetX = touch.pageX - bbox.x1;
+                pt.offsetY = touch.pageY - bbox.y1;
+                break;
+
+              default:
+                pt.offsetX = bbox.x1 - bbox.scrollLeft;
+                pt.offsetY = bbox.y1 - bbox.scrollTop;
+                break;
+            }
+            var x = touch.pageX - pt.offsetX;
+            var y = touch.pageY - pt.offsetY;
+            pt.rotation = 0;
+            pt.scale = 1;
+            pt.startTime = pt.moveTime = new Date().getTime();
+            pt.move = {
+                x: x,
+                y: y
+            };
+            pt.start = {
+                x: x,
+                y: y
+            };
+            conf.fingers++;
+        };
+        conf.event = event;
+        if (self.defaultListener) {
+            conf.listener = self.defaultListener;
+            delete self.defaultListener;
+        }
+        var isTouchStart = !conf.fingers;
+        var track = conf.tracker;
+        var touches = event.changedTouches || root.getCoords(event);
+        var length = touches.length;
+        for (var i = 0; i < length; i++) {
+            var touch = touches[i];
+            var sid = touch.identifier || Infinity;
+            if (conf.fingers) {
+                if (conf.fingers >= conf.maxFingers) {
+                    var ids = [];
+                    for (var sid in conf.tracker) ids.push(sid);
+                    self.identifier = ids.join(",");
+                    return isTouchStart;
+                }
+                var fingers = 0;
+                for (var rid in track) {
+                    if (track[rid].up) {
+                        delete track[rid];
+                        addTouchStart(touch, sid);
+                        conf.cancel = true;
+                        break;
+                    }
+                    fingers++;
+                }
+                if (track[sid]) continue;
+                addTouchStart(touch, sid);
+            } else {
+                track = conf.tracker = {};
+                self.bbox = conf.bbox = root.getBoundingBox(conf.target);
+                conf.fingers = 0;
+                conf.cancel = false;
+                addTouchStart(touch, sid);
+            }
+        }
+        var ids = [];
+        for (var sid in conf.tracker) ids.push(sid);
+        self.identifier = ids.join(",");
+        return isTouchStart;
+    };
+    root.pointerEnd = function(event, self, conf, onPointerUp) {
+        var touches = event.touches || [];
+        var length = touches.length;
+        var exists = {};
+        for (var i = 0; i < length; i++) {
+            var touch = touches[i];
+            var sid = touch.identifier;
+            exists[sid || Infinity] = true;
+        }
+        for (var sid in conf.tracker) {
+            var track = conf.tracker[sid];
+            if (exists[sid] || track.up) continue;
+            if (onPointerUp) {
+                onPointerUp({
+                    pageX: track.pageX,
+                    pageY: track.pageY,
+                    changedTouches: [ {
+                        pageX: track.pageX,
+                        pageY: track.pageY,
+                        identifier: sid === "Infinity" ? Infinity : sid
+                    } ]
+                }, "up");
+            }
+            track.up = true;
+            conf.fingers--;
+        }
+        if (conf.fingers !== 0) return false;
+        var ids = [];
+        conf.gestureFingers = 0;
+        for (var sid in conf.tracker) {
+            conf.gestureFingers++;
+            ids.push(sid);
+        }
+        self.identifier = ids.join(",");
+        return true;
+    };
+    root.getCoords = function(event) {
+        if (typeof event.pageX !== "undefined") {
+            root.getCoords = function(event) {
+                return Array({
+                    type: "mouse",
+                    x: event.pageX,
+                    y: event.pageY,
+                    pageX: event.pageX,
+                    pageY: event.pageY,
+                    identifier: event.pointerId || Infinity
+                });
+            };
+        } else {
+            root.getCoords = function(event) {
+                var doc = document.documentElement;
+                event = event || window.event;
+                return Array({
+                    type: "mouse",
+                    x: event.clientX + doc.scrollLeft,
+                    y: event.clientY + doc.scrollTop,
+                    pageX: event.clientX + doc.scrollLeft,
+                    pageY: event.clientY + doc.scrollTop,
+                    identifier: Infinity
+                });
+            };
+        }
+        return root.getCoords(event);
+    };
+    root.getCoord = function(event) {
+        if ("ontouchstart" in window) {
+            var pX = 0;
+            var pY = 0;
+            root.getCoord = function(event) {
+                var touches = event.changedTouches;
+                if (touches && touches.length) {
+                    return {
+                        x: pX = touches[0].pageX,
+                        y: pY = touches[0].pageY
+                    };
+                } else {
+                    return {
+                        x: pX,
+                        y: pY
+                    };
+                }
+            };
+        } else if (typeof event.pageX !== "undefined" && typeof event.pageY !== "undefined") {
+            root.getCoord = function(event) {
+                return {
+                    x: event.pageX,
+                    y: event.pageY
+                };
+            };
+        } else {
+            root.getCoord = function(event) {
+                var doc = document.documentElement;
+                event = event || window.event;
+                return {
+                    x: event.clientX + doc.scrollLeft,
+                    y: event.clientY + doc.scrollTop
+                };
+            };
+        }
+        return root.getCoord(event);
+    };
+    var getPropertyAsFloat = function(o, type) {
+        var n = parseFloat(o.getPropertyValue(type), 10);
+        return isFinite(n) ? n : 0;
+    };
+    root.getBoundingBox = function(o) {
+        if (o === window || o === document) o = document.body;
+        var bbox = {};
+        var bcr = o.getBoundingClientRect();
+        bbox.width = bcr.width;
+        bbox.height = bcr.height;
+        bbox.x1 = bcr.left;
+        bbox.y1 = bcr.top;
+        bbox.scaleX = bcr.width / o.offsetWidth || 1;
+        bbox.scaleY = bcr.height / o.offsetHeight || 1;
+        bbox.scrollLeft = 0;
+        bbox.scrollTop = 0;
+        var style = window.getComputedStyle(o);
+        var borderBox = style.getPropertyValue("box-sizing") === "border-box";
+        if (borderBox === false) {
+            var left = getPropertyAsFloat(style, "border-left-width");
+            var right = getPropertyAsFloat(style, "border-right-width");
+            var bottom = getPropertyAsFloat(style, "border-bottom-width");
+            var top = getPropertyAsFloat(style, "border-top-width");
+            bbox.border = [ left, right, top, bottom ];
+            bbox.x1 += left;
+            bbox.y1 += top;
+            bbox.width -= right + left;
+            bbox.height -= bottom + top;
+        }
+        bbox.x2 = bbox.x1 + bbox.width;
+        bbox.y2 = bbox.y1 + bbox.height;
+        var position = style.getPropertyValue("position");
+        var tmp = position === "fixed" ? o : o.parentNode;
+        while (tmp !== null) {
+            if (tmp === document.body) break;
+            if (tmp.scrollTop === undefined) break;
+            var style = window.getComputedStyle(tmp);
+            var position = style.getPropertyValue("position");
+            if (position === "absolute") {} else if (position === "fixed") {
+                bbox.scrollTop -= tmp.parentNode.scrollTop;
+                bbox.scrollLeft -= tmp.parentNode.scrollLeft;
+                break;
+            } else {
+                bbox.scrollLeft += tmp.scrollLeft;
+                bbox.scrollTop += tmp.scrollTop;
+            }
+            tmp = tmp.parentNode;
+        }
+        bbox.scrollBodyLeft = window.pageXOffset !== undefined ? window.pageXOffset : (document.documentElement || document.body.parentNode || document.body).scrollLeft;
+        bbox.scrollBodyTop = window.pageYOffset !== undefined ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
+        bbox.scrollLeft -= bbox.scrollBodyLeft;
+        bbox.scrollTop -= bbox.scrollBodyTop;
+        return bbox;
+    };
+    (function() {
+        var agent = navigator.userAgent.toLowerCase();
+        var mac = agent.indexOf("macintosh") !== -1;
+        var metaKeys;
+        if (mac && agent.indexOf("khtml") !== -1) {
+            metaKeys = {
+                91: true,
+                93: true
+            };
+        } else if (mac && agent.indexOf("firefox") !== -1) {
+            metaKeys = {
+                224: true
+            };
+        } else {
+            metaKeys = {
+                17: true
+            };
+        }
+        (root.metaTrackerReset = function() {
+            eventjs.fnKey = root.fnKey = false;
+            eventjs.metaKey = root.metaKey = false;
+            eventjs.escKey = root.escKey = false;
+            eventjs.ctrlKey = root.ctrlKey = false;
+            eventjs.shiftKey = root.shiftKey = false;
+            eventjs.altKey = root.altKey = false;
+        })();
+        root.metaTracker = function(event) {
+            var isKeyDown = event.type === "keydown";
+            if (event.keyCode === 27) eventjs.escKey = root.escKey = isKeyDown;
+            if (metaKeys[event.keyCode]) eventjs.metaKey = root.metaKey = isKeyDown;
+            eventjs.ctrlKey = root.ctrlKey = event.ctrlKey;
+            eventjs.shiftKey = root.shiftKey = event.shiftKey;
+            eventjs.altKey = root.altKey = event.altKey;
+        };
+    })();
+    return root;
+}(eventjs.proxy);
+
+if (typeof eventjs === "undefined") var eventjs = {};
+
+eventjs.MutationObserver = function() {
+    var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
+    var DOMAttrModifiedSupported = !MutationObserver && function() {
+        var p = document.createElement("p");
+        var flag = false;
+        var fn = function() {
+            flag = true;
+        };
+        if (p.addEventListener) {
+            p.addEventListener("DOMAttrModified", fn, false);
+        } else if (p.attachEvent) {
+            p.attachEvent("onDOMAttrModified", fn);
+        } else {
+            return false;
+        }
+        p.setAttribute("id", "target");
+        return flag;
+    }();
+    return function(container, callback) {
+        if (MutationObserver) {
+            var options = {
+                subtree: false,
+                attributes: true
+            };
+            var observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(e) {
+                    callback.call(e.target, e.attributeName);
+                });
+            });
+            observer.observe(container, options);
+        } else if (DOMAttrModifiedSupported) {
+            eventjs.add(container, "DOMAttrModified", function(e) {
+                callback.call(container, e.attrName);
+            });
+        } else if ("onpropertychange" in document.body) {
+            eventjs.add(container, "propertychange", function(e) {
+                callback.call(container, window.event.propertyName);
+            });
+        }
+    };
+}();
+
+if (typeof eventjs === "undefined") var eventjs = {};
+
+if (typeof eventjs.proxy === "undefined") eventjs.proxy = {};
+
+eventjs.proxy = function(root) {
+    "use strict";
+    root.click = function(conf) {
+        conf.gesture = conf.gesture || "click";
+        conf.maxFingers = conf.maxFingers || conf.fingers || 1;
+        conf.onPointerDown = function(event) {
+            if (root.pointerStart(event, self, conf)) {
+                eventjs.add(conf.target, "mouseup", conf.onPointerUp);
+            }
+        };
+        conf.onPointerUp = function(event) {
+            if (root.pointerEnd(event, self, conf)) {
+                eventjs.remove(conf.target, "mouseup", conf.onPointerUp);
+                var pointers = event.changedTouches || root.getCoords(event);
+                var pointer = pointers[0];
+                var bbox = conf.bbox;
+                var newbbox = root.getBoundingBox(conf.target);
+                var y = pointer.pageY - newbbox.scrollBodyTop;
+                var x = pointer.pageX - newbbox.scrollBodyLeft;
+                if (x > bbox.x1 && y > bbox.y1 && x < bbox.x2 && y < bbox.y2 && bbox.scrollTop === newbbox.scrollTop) {
+                    for (var key in conf.tracker) break;
+                    var point = conf.tracker[key];
+                    self.x = point.start.x;
+                    self.y = point.start.y;
+                    conf.listener(event, self);
+                }
+            }
+        };
+        var self = root.pointerSetup(conf);
+        self.state = "click";
+        eventjs.add(conf.target, "mousedown", conf.onPointerDown);
+        return self;
+    };
+    eventjs.Gesture = eventjs.Gesture || {};
+    eventjs.Gesture._gestureHandlers = eventjs.Gesture._gestureHandlers || {};
+    eventjs.Gesture._gestureHandlers.click = root.click;
+    return root;
+}(eventjs.proxy);
+
+if (typeof eventjs === "undefined") var eventjs = {};
+
+if (typeof eventjs.proxy === "undefined") eventjs.proxy = {};
+
+eventjs.proxy = function(root) {
+    "use strict";
+    root.dbltap = root.dblclick = function(conf) {
+        conf.gesture = conf.gesture || "dbltap";
+        conf.maxFingers = conf.maxFingers || conf.fingers || 1;
+        var delay = 700;
+        var time0, time1, timeout;
+        var pointer0, pointer1;
+        conf.onPointerDown = function(event) {
+            var pointers = event.changedTouches || root.getCoords(event);
+            if (time0 && !time1) {
+                pointer1 = pointers[0];
+                time1 = new Date().getTime() - time0;
+            } else {
+                pointer0 = pointers[0];
+                time0 = new Date().getTime();
+                time1 = 0;
+                clearTimeout(timeout);
+                timeout = setTimeout(function() {
+                    time0 = 0;
+                }, delay);
+            }
+            if (root.pointerStart(event, self, conf)) {
+                eventjs.add(conf.target, "mousemove", conf.onPointerMove).listener(event);
+                eventjs.add(conf.target, "mouseup", conf.onPointerUp);
+            }
+        };
+        conf.onPointerMove = function(event) {
+            if (time0 && !time1) {
+                var pointers = event.changedTouches || root.getCoords(event);
+                pointer1 = pointers[0];
+            }
+            var bbox = conf.bbox;
+            var ax = pointer1.pageX - bbox.x1;
+            var ay = pointer1.pageY - bbox.y1;
+            if (!(ax > 0 && ax < bbox.width && ay > 0 && ay < bbox.height && Math.abs(pointer1.pageX - pointer0.pageX) <= 25 && Math.abs(pointer1.pageY - pointer0.pageY) <= 25)) {
+                eventjs.remove(conf.target, "mousemove", conf.onPointerMove);
+                clearTimeout(timeout);
+                time0 = time1 = 0;
+            }
+        };
+        conf.onPointerUp = function(event) {
+            if (root.pointerEnd(event, self, conf)) {
+                eventjs.remove(conf.target, "mousemove", conf.onPointerMove);
+                eventjs.remove(conf.target, "mouseup", conf.onPointerUp);
+            }
+            if (time0 && time1) {
+                if (time1 <= delay) {
+                    self.state = conf.gesture;
+                    for (var key in conf.tracker) break;
+                    var point = conf.tracker[key];
+                    self.x = point.start.x;
+                    self.y = point.start.y;
+                    conf.listener(event, self);
+                }
+                clearTimeout(timeout);
+                time0 = time1 = 0;
+            }
+        };
+        var self = root.pointerSetup(conf);
+        self.state = "dblclick";
+        eventjs.add(conf.target, "mousedown", conf.onPointerDown);
+        return self;
+    };
+    eventjs.Gesture = eventjs.Gesture || {};
+    eventjs.Gesture._gestureHandlers = eventjs.Gesture._gestureHandlers || {};
+    eventjs.Gesture._gestureHandlers.dbltap = root.dbltap;
+    eventjs.Gesture._gestureHandlers.dblclick = root.dblclick;
+    return root;
+}(eventjs.proxy);
+
+if (typeof eventjs === "undefined") var eventjs = {};
+
+if (typeof eventjs.proxy === "undefined") eventjs.proxy = {};
+
+eventjs.proxy = function(root) {
+    "use strict";
+    root.dragElement = function(that, event) {
+        root.drag({
+            event: event,
+            target: that,
+            position: "move",
+            listener: function(event, self) {
+                that.style.left = self.x + "px";
+                that.style.top = self.y + "px";
+                eventjs.prevent(event);
+            }
+        });
+    };
+    root.drag = function(conf) {
+        conf.gesture = "drag";
+        conf.onPointerDown = function(event) {
+            if (root.pointerStart(event, self, conf)) {
+                if (!conf.monitor) {
+                    eventjs.add(conf.doc, "mousemove", conf.onPointerMove);
+                    eventjs.add(conf.doc, "mouseup", conf.onPointerUp);
+                }
+            }
+            conf.onPointerMove(event, "down");
+        };
+        conf.onPointerMove = function(event, state) {
+            if (!conf.tracker) return conf.onPointerDown(event);
+            var bbox = conf.bbox;
+            var touches = event.changedTouches || root.getCoords(event);
+            var length = touches.length;
+            for (var i = 0; i < length; i++) {
+                var touch = touches[i];
+                var identifier = touch.identifier || Infinity;
+                var pt = conf.tracker[identifier];
+                if (!pt) continue;
+                pt.pageX = touch.pageX;
+                pt.pageY = touch.pageY;
+                self.state = state || "move";
+                self.identifier = identifier;
+                self.start = pt.start;
+                self.fingers = conf.fingers;
+                if (conf.position === "differenceFromLast") {
+                    self.x = pt.pageX - pt.offsetX;
+                    self.y = pt.pageY - pt.offsetY;
+                    pt.offsetX = pt.pageX;
+                    pt.offsetY = pt.pageY;
+                } else {
+                    self.x = pt.pageX - pt.offsetX;
+                    self.y = pt.pageY - pt.offsetY;
+                }
+                conf.listener(event, self);
+            }
+        };
+        conf.onPointerUp = function(event) {
+            if (root.pointerEnd(event, self, conf, conf.onPointerMove)) {
+                if (!conf.monitor) {
+                    eventjs.remove(conf.doc, "mousemove", conf.onPointerMove);
+                    eventjs.remove(conf.doc, "mouseup", conf.onPointerUp);
+                }
+            }
+        };
+        var self = root.pointerSetup(conf);
+        if (conf.event) {
+            conf.onPointerDown(conf.event);
+        } else {
+            eventjs.add(conf.target, "mousedown", conf.onPointerDown);
+            if (conf.monitor) {
+                eventjs.add(conf.doc, "mousemove", conf.onPointerMove);
+                eventjs.add(conf.doc, "mouseup", conf.onPointerUp);
+            }
+        }
+        return self;
+    };
+    eventjs.Gesture = eventjs.Gesture || {};
+    eventjs.Gesture._gestureHandlers = eventjs.Gesture._gestureHandlers || {};
+    eventjs.Gesture._gestureHandlers.drag = root.drag;
+    return root;
+}(eventjs.proxy);
+
+if (typeof eventjs === "undefined") var eventjs = {};
+
+if (typeof eventjs.proxy === "undefined") eventjs.proxy = {};
+
+eventjs.proxy = function(root) {
+    "use strict";
+    var RAD_DEG = Math.PI / 180;
+    var getCentroid = function(self, points) {
+        var centroidx = 0;
+        var centroidy = 0;
+        var length = 0;
+        for (var sid in points) {
+            var touch = points[sid];
+            if (touch.up) continue;
+            centroidx += touch.move.x;
+            centroidy += touch.move.y;
+            length++;
+        }
+        self.x = centroidx /= length;
+        self.y = centroidy /= length;
+        return self;
+    };
+    root.gesture = function(conf) {
+        conf.gesture = conf.gesture || "gesture";
+        conf.minFingers = conf.minFingers || conf.fingers || 2;
+        conf.onPointerDown = function(event) {
+            var fingers = conf.fingers;
+            if (root.pointerStart(event, self, conf)) {
+                eventjs.add(conf.doc, "mousemove", conf.onPointerMove);
+                eventjs.add(conf.doc, "mouseup", conf.onPointerUp);
+            }
+            if (conf.fingers === conf.minFingers && fingers !== conf.fingers) {
+                self.fingers = conf.minFingers;
+                self.scale = 1;
+                self.rotation = 0;
+                self.state = "start";
+                var sids = "";
+                for (var key in conf.tracker) sids += key;
+                self.identifier = parseInt(sids);
+                getCentroid(self, conf.tracker);
+                conf.listener(event, self);
+            }
+        };
+        conf.onPointerMove = function(event, state) {
+            var bbox = conf.bbox;
+            var points = conf.tracker;
+            var touches = event.changedTouches || root.getCoords(event);
+            var length = touches.length;
+            for (var i = 0; i < length; i++) {
+                var touch = touches[i];
+                var sid = touch.identifier || Infinity;
+                var pt = points[sid];
+                if (!pt) continue;
+                pt.move.x = touch.pageX - bbox.x1;
+                pt.move.y = touch.pageY - bbox.y1;
+            }
+            if (conf.fingers < conf.minFingers) return;
+            var touches = [];
+            var scale = 0;
+            var rotation = 0;
+            getCentroid(self, points);
+            for (var sid in points) {
+                var touch = points[sid];
+                if (touch.up) continue;
+                var start = touch.start;
+                if (!start.distance) {
+                    var dx = start.x - self.x;
+                    var dy = start.y - self.y;
+                    start.distance = Math.sqrt(dx * dx + dy * dy);
+                    start.angle = Math.atan2(dx, dy) / RAD_DEG;
+                }
+                var dx = touch.move.x - self.x;
+                var dy = touch.move.y - self.y;
+                var distance = Math.sqrt(dx * dx + dy * dy);
+                scale += distance / start.distance;
+                var angle = Math.atan2(dx, dy) / RAD_DEG;
+                var rotate = (start.angle - angle + 360) % 360 - 180;
+                touch.DEG2 = touch.DEG1;
+                touch.DEG1 = rotate > 0 ? rotate : -rotate;
+                if (typeof touch.DEG2 !== "undefined") {
+                    if (rotate > 0) {
+                        touch.rotation += touch.DEG1 - touch.DEG2;
+                    } else {
+                        touch.rotation -= touch.DEG1 - touch.DEG2;
+                    }
+                    rotation += touch.rotation;
+                }
+                touches.push(touch.move);
+            }
+            self.touches = touches;
+            self.fingers = conf.fingers;
+            self.scale = scale / conf.fingers;
+            self.rotation = rotation / conf.fingers;
+            self.state = "change";
+            conf.listener(event, self);
+        };
+        conf.onPointerUp = function(event) {
+            var fingers = conf.fingers;
+            if (root.pointerEnd(event, self, conf)) {
+                eventjs.remove(conf.doc, "mousemove", conf.onPointerMove);
+                eventjs.remove(conf.doc, "mouseup", conf.onPointerUp);
+            }
+            if (fingers === conf.minFingers && conf.fingers < conf.minFingers) {
+                self.fingers = conf.fingers;
+                self.state = "end";
+                conf.listener(event, self);
+            }
+        };
+        var self = root.pointerSetup(conf);
+        eventjs.add(conf.target, "mousedown", conf.onPointerDown);
+        return self;
+    };
+    eventjs.Gesture = eventjs.Gesture || {};
+    eventjs.Gesture._gestureHandlers = eventjs.Gesture._gestureHandlers || {};
+    eventjs.Gesture._gestureHandlers.gesture = root.gesture;
+    return root;
+}(eventjs.proxy);
+
+if (typeof eventjs === "undefined") var eventjs = {};
+
+if (typeof eventjs.proxy === "undefined") eventjs.proxy = {};
+
+eventjs.proxy = function(root) {
+    "use strict";
+    root.pointerdown = root.pointermove = root.pointerup = function(conf) {
+        conf.gesture = conf.gesture || "pointer";
+        if (conf.target.isPointerEmitter) return;
+        var isDown = true;
+        conf.onPointerDown = function(event) {
+            isDown = false;
+            self.gesture = "pointerdown";
+            conf.listener(event, self);
+        };
+        conf.onPointerMove = function(event) {
+            self.gesture = "pointermove";
+            conf.listener(event, self, isDown);
+        };
+        conf.onPointerUp = function(event) {
+            isDown = true;
+            self.gesture = "pointerup";
+            conf.listener(event, self, true);
+        };
+        var self = root.pointerSetup(conf);
+        eventjs.add(conf.target, "mousedown", conf.onPointerDown);
+        eventjs.add(conf.target, "mousemove", conf.onPointerMove);
+        eventjs.add(conf.doc, "mouseup", conf.onPointerUp);
+        conf.target.isPointerEmitter = true;
+        return self;
+    };
+    eventjs.Gesture = eventjs.Gesture || {};
+    eventjs.Gesture._gestureHandlers = eventjs.Gesture._gestureHandlers || {};
+    eventjs.Gesture._gestureHandlers.pointerdown = root.pointerdown;
+    eventjs.Gesture._gestureHandlers.pointermove = root.pointermove;
+    eventjs.Gesture._gestureHandlers.pointerup = root.pointerup;
+    return root;
+}(eventjs.proxy);
+
+if (typeof eventjs === "undefined") var eventjs = {};
+
+if (typeof eventjs.proxy === "undefined") eventjs.proxy = {};
+
+eventjs.proxy = function(root) {
+    "use strict";
+    root.shake = function(conf) {
+        var self = {
+            gesture: "devicemotion",
+            acceleration: {},
+            accelerationIncludingGravity: {},
+            target: conf.target,
+            listener: conf.listener,
+            remove: function() {
+                window.removeEventListener("devicemotion", onDeviceMotion, false);
+            }
+        };
+        var threshold = 4;
+        var timeout = 1e3;
+        var timeframe = 200;
+        var shakes = 3;
+        var lastShake = new Date().getTime();
+        var gravity = {
+            x: 0,
+            y: 0,
+            z: 0
+        };
+        var delta = {
+            x: {
+                count: 0,
+                value: 0
+            },
+            y: {
+                count: 0,
+                value: 0
+            },
+            z: {
+                count: 0,
+                value: 0
+            }
+        };
+        var onDeviceMotion = function(e) {
+            var alpha = .8;
+            var o = e.accelerationIncludingGravity;
+            gravity.x = alpha * gravity.x + (1 - alpha) * o.x;
+            gravity.y = alpha * gravity.y + (1 - alpha) * o.y;
+            gravity.z = alpha * gravity.z + (1 - alpha) * o.z;
+            self.accelerationIncludingGravity = gravity;
+            self.acceleration.x = o.x - gravity.x;
+            self.acceleration.y = o.y - gravity.y;
+            self.acceleration.z = o.z - gravity.z;
+            if (conf.gesture === "devicemotion") {
+                conf.listener(e, self);
+                return;
+            }
+            var data = "xyz";
+            var now = new Date().getTime();
+            for (var n = 0, length = data.length; n < length; n++) {
+                var letter = data[n];
+                var ACCELERATION = self.acceleration[letter];
+                var DELTA = delta[letter];
+                var abs = Math.abs(ACCELERATION);
+                if (now - lastShake < timeout) continue;
+                if (abs > threshold) {
+                    var idx = now * ACCELERATION / abs;
+                    var span = Math.abs(idx + DELTA.value);
+                    if (DELTA.value && span < timeframe) {
+                        DELTA.value = idx;
+                        DELTA.count++;
+                        if (DELTA.count === shakes) {
+                            conf.listener(e, self);
+                            lastShake = now;
+                            DELTA.value = 0;
+                            DELTA.count = 0;
+                        }
+                    } else {
+                        DELTA.value = idx;
+                        DELTA.count = 1;
+                    }
+                }
+            }
+        };
+        if (!window.addEventListener) return;
+        window.addEventListener("devicemotion", onDeviceMotion, false);
+        return self;
+    };
+    eventjs.Gesture = eventjs.Gesture || {};
+    eventjs.Gesture._gestureHandlers = eventjs.Gesture._gestureHandlers || {};
+    eventjs.Gesture._gestureHandlers.shake = root.shake;
+    return root;
+}(eventjs.proxy);
+
+if (typeof eventjs === "undefined") var eventjs = {};
+
+if (typeof eventjs.proxy === "undefined") eventjs.proxy = {};
+
+eventjs.proxy = function(root) {
+    "use strict";
+    var RAD_DEG = Math.PI / 180;
+    root.swipe = function(conf) {
+        conf.snap = conf.snap || 90;
+        conf.threshold = conf.threshold || 1;
+        conf.gesture = conf.gesture || "swipe";
+        conf.onPointerDown = function(event) {
+            if (root.pointerStart(event, self, conf)) {
+                eventjs.add(conf.doc, "mousemove", conf.onPointerMove).listener(event);
+                eventjs.add(conf.doc, "mouseup", conf.onPointerUp);
+            }
+        };
+        conf.onPointerMove = function(event) {
+            var touches = event.changedTouches || root.getCoords(event);
+            var length = touches.length;
+            for (var i = 0; i < length; i++) {
+                var touch = touches[i];
+                var sid = touch.identifier || Infinity;
+                var o = conf.tracker[sid];
+                if (!o) continue;
+                o.move.x = touch.pageX;
+                o.move.y = touch.pageY;
+                o.moveTime = new Date().getTime();
+            }
+        };
+        conf.onPointerUp = function(event) {
+            if (root.pointerEnd(event, self, conf)) {
+                eventjs.remove(conf.doc, "mousemove", conf.onPointerMove);
+                eventjs.remove(conf.doc, "mouseup", conf.onPointerUp);
+                var velocity1;
+                var velocity2;
+                var degree1;
+                var degree2;
+                var start = {
+                    x: 0,
+                    y: 0
+                };
+                var endx = 0;
+                var endy = 0;
+                var length = 0;
+                for (var sid in conf.tracker) {
+                    var touch = conf.tracker[sid];
+                    var xdist = touch.move.x - touch.start.x;
+                    var ydist = touch.move.y - touch.start.y;
+                    endx += touch.move.x;
+                    endy += touch.move.y;
+                    start.x += touch.start.x;
+                    start.y += touch.start.y;
+                    length++;
+                    var distance = Math.sqrt(xdist * xdist + ydist * ydist);
+                    var ms = touch.moveTime - touch.startTime;
+                    var degree2 = Math.atan2(xdist, ydist) / RAD_DEG + 180;
+                    var velocity2 = ms ? distance / ms : 0;
+                    if (typeof degree1 === "undefined") {
+                        degree1 = degree2;
+                        velocity1 = velocity2;
+                    } else if (Math.abs(degree2 - degree1) <= 20) {
+                        degree1 = (degree1 + degree2) / 2;
+                        velocity1 = (velocity1 + velocity2) / 2;
+                    } else {
+                        return;
+                    }
+                }
+                var fingers = conf.gestureFingers;
+                if (conf.minFingers <= fingers && conf.maxFingers >= fingers) {
+                    if (velocity1 > conf.threshold) {
+                        start.x /= length;
+                        start.y /= length;
+                        self.start = start;
+                        self.x = endx / length;
+                        self.y = endy / length;
+                        self.angle = -(((degree1 / conf.snap + .5 >> 0) * conf.snap || 360) - 360);
+                        self.velocity = velocity1;
+                        self.fingers = fingers;
+                        self.state = "swipe";
+                        conf.listener(event, self);
+                    }
+                }
+            }
+        };
+        var self = root.pointerSetup(conf);
+        eventjs.add(conf.target, "mousedown", conf.onPointerDown);
+        return self;
+    };
+    eventjs.Gesture = eventjs.Gesture || {};
+    eventjs.Gesture._gestureHandlers = eventjs.Gesture._gestureHandlers || {};
+    eventjs.Gesture._gestureHandlers.swipe = root.swipe;
+    return root;
+}(eventjs.proxy);
+
+if (typeof eventjs === "undefined") var eventjs = {};
+
+if (typeof eventjs.proxy === "undefined") eventjs.proxy = {};
+
+eventjs.proxy = function(root) {
+    "use strict";
+    root.longpress = function(conf) {
+        conf.gesture = "longpress";
+        return root.tap(conf);
+    };
+    root.tap = function(conf) {
+        conf.delay = conf.delay || 500;
+        conf.timeout = conf.timeout || 250;
+        conf.driftDeviance = conf.driftDeviance || 10;
+        conf.gesture = conf.gesture || "tap";
+        var timestamp, timeout;
+        conf.onPointerDown = function(event) {
+            if (root.pointerStart(event, self, conf)) {
+                timestamp = new Date().getTime();
+                eventjs.add(conf.doc, "mousemove", conf.onPointerMove).listener(event);
+                eventjs.add(conf.doc, "mouseup", conf.onPointerUp);
+                if (conf.gesture !== "longpress") return;
+                timeout = setTimeout(function() {
+                    if (event.cancelBubble && ++event.cancelBubbleCount > 1) return;
+                    var fingers = 0;
+                    for (var key in conf.tracker) {
+                        var point = conf.tracker[key];
+                        if (point.end === true) return;
+                        if (conf.cancel) return;
+                        fingers++;
+                    }
+                    if (conf.minFingers <= fingers && conf.maxFingers >= fingers) {
+                        self.state = "start";
+                        self.fingers = fingers;
+                        self.x = point.start.x;
+                        self.y = point.start.y;
+                        conf.listener(event, self);
+                    }
+                }, conf.delay);
+            }
+        };
+        conf.onPointerMove = function(event) {
+            var bbox = conf.bbox;
+            var touches = event.changedTouches || root.getCoords(event);
+            var length = touches.length;
+            for (var i = 0; i < length; i++) {
+                var touch = touches[i];
+                var identifier = touch.identifier || Infinity;
+                var pt = conf.tracker[identifier];
+                if (!pt) continue;
+                var x = touch.pageX - bbox.x1;
+                var y = touch.pageY - bbox.y1;
+                var dx = x - pt.start.x;
+                var dy = y - pt.start.y;
+                var distance = Math.sqrt(dx * dx + dy * dy);
+                if (!(x > 0 && x < bbox.width && y > 0 && y < bbox.height && distance <= conf.driftDeviance)) {
+                    eventjs.remove(conf.doc, "mousemove", conf.onPointerMove);
+                    conf.cancel = true;
+                    return;
+                }
+            }
+        };
+        conf.onPointerUp = function(event) {
+            if (root.pointerEnd(event, self, conf)) {
+                clearTimeout(timeout);
+                eventjs.remove(conf.doc, "mousemove", conf.onPointerMove);
+                eventjs.remove(conf.doc, "mouseup", conf.onPointerUp);
+                if (event.cancelBubble && ++event.cancelBubbleCount > 1) return;
+                if (conf.gesture === "longpress") {
+                    if (self.state === "start") {
+                        self.state = "end";
+                        conf.listener(event, self);
+                    }
+                    return;
+                }
+                if (conf.cancel) return;
+                if (new Date().getTime() - timestamp > conf.timeout) return;
+                var fingers = conf.gestureFingers;
+                if (conf.minFingers <= fingers && conf.maxFingers >= fingers) {
+                    self.state = "tap";
+                    self.fingers = conf.gestureFingers;
+                    conf.listener(event, self);
+                }
+            }
+        };
+        var self = root.pointerSetup(conf);
+        eventjs.add(conf.target, "mousedown", conf.onPointerDown);
+        return self;
+    };
+    eventjs.Gesture = eventjs.Gesture || {};
+    eventjs.Gesture._gestureHandlers = eventjs.Gesture._gestureHandlers || {};
+    eventjs.Gesture._gestureHandlers.tap = root.tap;
+    eventjs.Gesture._gestureHandlers.longpress = root.longpress;
+    return root;
+}(eventjs.proxy);
+
+if (typeof eventjs === "undefined") var eventjs = {};
+
+if (typeof eventjs.proxy === "undefined") eventjs.proxy = {};
+
+eventjs.proxy = function(root) {
+    "use strict";
+    root.wheelPreventElasticBounce = function(el) {
+        if (!el) return;
+        if (typeof el === "string") el = document.querySelector(el);
+        eventjs.add(el, "wheel", function(event, self) {
+            self.preventElasticBounce();
+            eventjs.stop(event);
+        });
+    };
+    root.wheel = function(conf) {
+        var interval;
+        var timeout = conf.timeout || 150;
+        var count = 0;
+        var self = {
+            gesture: "wheel",
+            state: "start",
+            wheelDelta: 0,
+            target: conf.target,
+            listener: conf.listener,
+            preventElasticBounce: function(event) {
+                var target = this.target;
+                var scrollTop = target.scrollTop;
+                var top = scrollTop + target.offsetHeight;
+                var height = target.scrollHeight;
+                if (top === height && this.wheelDelta <= 0) eventjs.cancel(event); else if (scrollTop === 0 && this.wheelDelta >= 0) eventjs.cancel(event);
+                eventjs.stop(event);
+            },
+            add: function() {
+                conf.target[add](type, onMouseWheel, false);
+            },
+            remove: function() {
+                conf.target[remove](type, onMouseWheel, false);
+            }
+        };
+        var onMouseWheel = function(event) {
+            event = event || window.event;
+            self.state = count++ ? "change" : "start";
+            self.wheelDelta = event.detail ? event.detail * -20 : event.wheelDelta;
+            conf.listener(event, self);
+            clearTimeout(interval);
+            interval = setTimeout(function() {
+                count = 0;
+                self.state = "end";
+                self.wheelDelta = 0;
+                conf.listener(event, self);
+            }, timeout);
+        };
+        var add = document.addEventListener ? "addEventListener" : "attachEvent";
+        var remove = document.removeEventListener ? "removeEventListener" : "detachEvent";
+        var type = eventjs.getEventSupport("mousewheel") ? "mousewheel" : "DOMMouseScroll";
+        conf.target[add](type, onMouseWheel, false);
+        return self;
+    };
+    eventjs.Gesture = eventjs.Gesture || {};
+    eventjs.Gesture._gestureHandlers = eventjs.Gesture._gestureHandlers || {};
+    eventjs.Gesture._gestureHandlers.wheel = root.wheel;
+    return root;
+}(eventjs.proxy);
+
+if (typeof Event === "undefined") var Event = {};
+
+if (typeof Event.proxy === "undefined") Event.proxy = {};
+
+Event.proxy = function(root) {
+    "use strict";
+    root.orientation = function(conf) {
+        var self = {
+            gesture: "orientationchange",
+            previous: null,
+            current: window.orientation,
+            target: conf.target,
+            listener: conf.listener,
+            remove: function() {
+                window.removeEventListener("orientationchange", onOrientationChange, false);
+            }
+        };
+        var onOrientationChange = function(e) {
+            self.previous = self.current;
+            self.current = window.orientation;
+            if (self.previous !== null && self.previous != self.current) {
+                conf.listener(e, self);
+                return;
+            }
+        };
+        if (window.DeviceOrientationEvent) {
+            window.addEventListener("orientationchange", onOrientationChange, false);
+        }
+        return self;
+    };
+    Event.Gesture = Event.Gesture || {};
+    Event.Gesture._gestureHandlers = Event.Gesture._gestureHandlers || {};
+    Event.Gesture._gestureHandlers.orientation = root.orientation;
+    return root;
+}(Event.proxy);
 
 (function() {
     function _removeEventListener(eventName, handler) {
@@ -1034,7 +2737,7 @@ fabric.Collection = {
     };
     function _getPointer(event, pageProp, clientProp) {
         var touchProp = event.type === "touchend" ? "changedTouches" : "touches";
-        return event[touchProp] && event[touchProp][0] ? event[touchProp][0][pageProp] - (event[touchProp][0][pageProp] - event[touchProp][0][clientProp]) || event[clientProp] : event[clientProp];
+        return event[touchProp] && event[touchProp][0] ? event[touchProp][0][pageProp] - (event[touchProp][0][pageProp] - event[touchProp][0][clientProp]) || (event[clientProp] || 0) : event[clientProp];
     }
     if (fabric.isTouchSupported) {
         pointerX = function(event) {
@@ -1326,277 +3029,6 @@ if (typeof console !== "undefined") {
         }
     });
 }
-
-(function() {
-    function animate(options) {
-        requestAnimFrame(function(timestamp) {
-            options || (options = {});
-            var start = timestamp || +new Date(), duration = options.duration || 500, finish = start + duration, time, onChange = options.onChange || function() {}, abort = options.abort || function() {
-                return false;
-            }, easing = options.easing || function(t, b, c, d) {
-                return -c * Math.cos(t / d * (Math.PI / 2)) + c + b;
-            }, startValue = "startValue" in options ? options.startValue : 0, endValue = "endValue" in options ? options.endValue : 100, byValue = options.byValue || endValue - startValue;
-            options.onStart && options.onStart();
-            (function tick(ticktime) {
-                time = ticktime || +new Date();
-                var currentTime = time > finish ? duration : time - start;
-                if (abort()) {
-                    options.onComplete && options.onComplete();
-                    return;
-                }
-                onChange(easing(currentTime, startValue, byValue, duration));
-                if (time > finish) {
-                    options.onComplete && options.onComplete();
-                    return;
-                }
-                requestAnimFrame(tick);
-            })(start);
-        });
-    }
-    var _requestAnimFrame = fabric.window.requestAnimationFrame || fabric.window.webkitRequestAnimationFrame || fabric.window.mozRequestAnimationFrame || fabric.window.oRequestAnimationFrame || fabric.window.msRequestAnimationFrame || function(callback) {
-        fabric.window.setTimeout(callback, 1e3 / 60);
-    };
-    function requestAnimFrame() {
-        return _requestAnimFrame.apply(fabric.window, arguments);
-    }
-    fabric.util.animate = animate;
-    fabric.util.requestAnimFrame = requestAnimFrame;
-})();
-
-(function() {
-    function normalize(a, c, p, s) {
-        if (a < Math.abs(c)) {
-            a = c;
-            s = p / 4;
-        } else {
-            if (c === 0 && a === 0) {
-                s = p / (2 * Math.PI) * Math.asin(1);
-            } else {
-                s = p / (2 * Math.PI) * Math.asin(c / a);
-            }
-        }
-        return {
-            a: a,
-            c: c,
-            p: p,
-            s: s
-        };
-    }
-    function elastic(opts, t, d) {
-        return opts.a * Math.pow(2, 10 * (t -= 1)) * Math.sin((t * d - opts.s) * (2 * Math.PI) / opts.p);
-    }
-    function easeOutCubic(t, b, c, d) {
-        return c * ((t = t / d - 1) * t * t + 1) + b;
-    }
-    function easeInOutCubic(t, b, c, d) {
-        t /= d / 2;
-        if (t < 1) {
-            return c / 2 * t * t * t + b;
-        }
-        return c / 2 * ((t -= 2) * t * t + 2) + b;
-    }
-    function easeInQuart(t, b, c, d) {
-        return c * (t /= d) * t * t * t + b;
-    }
-    function easeOutQuart(t, b, c, d) {
-        return -c * ((t = t / d - 1) * t * t * t - 1) + b;
-    }
-    function easeInOutQuart(t, b, c, d) {
-        t /= d / 2;
-        if (t < 1) {
-            return c / 2 * t * t * t * t + b;
-        }
-        return -c / 2 * ((t -= 2) * t * t * t - 2) + b;
-    }
-    function easeInQuint(t, b, c, d) {
-        return c * (t /= d) * t * t * t * t + b;
-    }
-    function easeOutQuint(t, b, c, d) {
-        return c * ((t = t / d - 1) * t * t * t * t + 1) + b;
-    }
-    function easeInOutQuint(t, b, c, d) {
-        t /= d / 2;
-        if (t < 1) {
-            return c / 2 * t * t * t * t * t + b;
-        }
-        return c / 2 * ((t -= 2) * t * t * t * t + 2) + b;
-    }
-    function easeInSine(t, b, c, d) {
-        return -c * Math.cos(t / d * (Math.PI / 2)) + c + b;
-    }
-    function easeOutSine(t, b, c, d) {
-        return c * Math.sin(t / d * (Math.PI / 2)) + b;
-    }
-    function easeInOutSine(t, b, c, d) {
-        return -c / 2 * (Math.cos(Math.PI * t / d) - 1) + b;
-    }
-    function easeInExpo(t, b, c, d) {
-        return t === 0 ? b : c * Math.pow(2, 10 * (t / d - 1)) + b;
-    }
-    function easeOutExpo(t, b, c, d) {
-        return t === d ? b + c : c * (-Math.pow(2, -10 * t / d) + 1) + b;
-    }
-    function easeInOutExpo(t, b, c, d) {
-        if (t === 0) {
-            return b;
-        }
-        if (t === d) {
-            return b + c;
-        }
-        t /= d / 2;
-        if (t < 1) {
-            return c / 2 * Math.pow(2, 10 * (t - 1)) + b;
-        }
-        return c / 2 * (-Math.pow(2, -10 * --t) + 2) + b;
-    }
-    function easeInCirc(t, b, c, d) {
-        return -c * (Math.sqrt(1 - (t /= d) * t) - 1) + b;
-    }
-    function easeOutCirc(t, b, c, d) {
-        return c * Math.sqrt(1 - (t = t / d - 1) * t) + b;
-    }
-    function easeInOutCirc(t, b, c, d) {
-        t /= d / 2;
-        if (t < 1) {
-            return -c / 2 * (Math.sqrt(1 - t * t) - 1) + b;
-        }
-        return c / 2 * (Math.sqrt(1 - (t -= 2) * t) + 1) + b;
-    }
-    function easeInElastic(t, b, c, d) {
-        var s = 1.70158, p = 0, a = c;
-        if (t === 0) {
-            return b;
-        }
-        t /= d;
-        if (t === 1) {
-            return b + c;
-        }
-        if (!p) {
-            p = d * .3;
-        }
-        var opts = normalize(a, c, p, s);
-        return -elastic(opts, t, d) + b;
-    }
-    function easeOutElastic(t, b, c, d) {
-        var s = 1.70158, p = 0, a = c;
-        if (t === 0) {
-            return b;
-        }
-        t /= d;
-        if (t === 1) {
-            return b + c;
-        }
-        if (!p) {
-            p = d * .3;
-        }
-        var opts = normalize(a, c, p, s);
-        return opts.a * Math.pow(2, -10 * t) * Math.sin((t * d - opts.s) * (2 * Math.PI) / opts.p) + opts.c + b;
-    }
-    function easeInOutElastic(t, b, c, d) {
-        var s = 1.70158, p = 0, a = c;
-        if (t === 0) {
-            return b;
-        }
-        t /= d / 2;
-        if (t === 2) {
-            return b + c;
-        }
-        if (!p) {
-            p = d * (.3 * 1.5);
-        }
-        var opts = normalize(a, c, p, s);
-        if (t < 1) {
-            return -.5 * elastic(opts, t, d) + b;
-        }
-        return opts.a * Math.pow(2, -10 * (t -= 1)) * Math.sin((t * d - opts.s) * (2 * Math.PI) / opts.p) * .5 + opts.c + b;
-    }
-    function easeInBack(t, b, c, d, s) {
-        if (s === undefined) {
-            s = 1.70158;
-        }
-        return c * (t /= d) * t * ((s + 1) * t - s) + b;
-    }
-    function easeOutBack(t, b, c, d, s) {
-        if (s === undefined) {
-            s = 1.70158;
-        }
-        return c * ((t = t / d - 1) * t * ((s + 1) * t + s) + 1) + b;
-    }
-    function easeInOutBack(t, b, c, d, s) {
-        if (s === undefined) {
-            s = 1.70158;
-        }
-        t /= d / 2;
-        if (t < 1) {
-            return c / 2 * (t * t * (((s *= 1.525) + 1) * t - s)) + b;
-        }
-        return c / 2 * ((t -= 2) * t * (((s *= 1.525) + 1) * t + s) + 2) + b;
-    }
-    function easeInBounce(t, b, c, d) {
-        return c - easeOutBounce(d - t, 0, c, d) + b;
-    }
-    function easeOutBounce(t, b, c, d) {
-        if ((t /= d) < 1 / 2.75) {
-            return c * (7.5625 * t * t) + b;
-        } else if (t < 2 / 2.75) {
-            return c * (7.5625 * (t -= 1.5 / 2.75) * t + .75) + b;
-        } else if (t < 2.5 / 2.75) {
-            return c * (7.5625 * (t -= 2.25 / 2.75) * t + .9375) + b;
-        } else {
-            return c * (7.5625 * (t -= 2.625 / 2.75) * t + .984375) + b;
-        }
-    }
-    function easeInOutBounce(t, b, c, d) {
-        if (t < d / 2) {
-            return easeInBounce(t * 2, 0, c, d) * .5 + b;
-        }
-        return easeOutBounce(t * 2 - d, 0, c, d) * .5 + c * .5 + b;
-    }
-    fabric.util.ease = {
-        easeInQuad: function(t, b, c, d) {
-            return c * (t /= d) * t + b;
-        },
-        easeOutQuad: function(t, b, c, d) {
-            return -c * (t /= d) * (t - 2) + b;
-        },
-        easeInOutQuad: function(t, b, c, d) {
-            t /= d / 2;
-            if (t < 1) {
-                return c / 2 * t * t + b;
-            }
-            return -c / 2 * (--t * (t - 2) - 1) + b;
-        },
-        easeInCubic: function(t, b, c, d) {
-            return c * (t /= d) * t * t + b;
-        },
-        easeOutCubic: easeOutCubic,
-        easeInOutCubic: easeInOutCubic,
-        easeInQuart: easeInQuart,
-        easeOutQuart: easeOutQuart,
-        easeInOutQuart: easeInOutQuart,
-        easeInQuint: easeInQuint,
-        easeOutQuint: easeOutQuint,
-        easeInOutQuint: easeInOutQuint,
-        easeInSine: easeInSine,
-        easeOutSine: easeOutSine,
-        easeInOutSine: easeInOutSine,
-        easeInExpo: easeInExpo,
-        easeOutExpo: easeOutExpo,
-        easeInOutExpo: easeInOutExpo,
-        easeInCirc: easeInCirc,
-        easeOutCirc: easeOutCirc,
-        easeInOutCirc: easeInOutCirc,
-        easeInElastic: easeInElastic,
-        easeOutElastic: easeOutElastic,
-        easeInOutElastic: easeInOutElastic,
-        easeInBack: easeInBack,
-        easeOutBack: easeOutBack,
-        easeInOutBack: easeInOutBack,
-        easeInBounce: easeInBounce,
-        easeOutBounce: easeOutBounce,
-        easeInOutBounce: easeInOutBounce
-    };
-})();
 
 (function(global) {
     "use strict";
@@ -4171,14 +5603,19 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, {
             };
         },
         isTargetTransparent: function(target, x, y) {
-            var hasBorders = target.hasBorders, transparentCorners = target.transparentCorners;
+            var hasBorders = target.hasBorders, transparentCorners = target.transparentCorners, ctx = this.contextCache, shouldTransform = target.group && target.group === this.getActiveGroup();
             target.hasBorders = target.transparentCorners = false;
-            target.render(this.contextCache);
-            target._renderControls(this.contextCache);
+            if (shouldTransform) {
+                ctx.save();
+                ctx.transform.apply(ctx, target.group.calcTransformMatrix());
+            }
+            target.render(ctx);
+            target.active && target._renderControls(ctx);
             target.hasBorders = hasBorders;
             target.transparentCorners = transparentCorners;
-            var isTransparent = fabric.util.isTransparent(this.contextCache, x, y, this.targetFindTolerance);
-            this.clearContext(this.contextCache);
+            var isTransparent = fabric.util.isTransparent(ctx, x, y, this.targetFindTolerance);
+            shouldTransform && ctx.restore();
+            this.clearContext(ctx);
             return isTransparent;
         },
         _shouldClearSelection: function(e, target) {
@@ -4505,7 +5942,7 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, {
                 return this.lastRenderedObjectWithControlsAboveOverlay;
             }
             var activeGroup = this.getActiveGroup();
-            if (activeGroup && !skipGroup && this.containsPoint(e, activeGroup)) {
+            if (!skipGroup && this._checkTarget(e, activeGroup, this.getPointer(e, true))) {
                 return activeGroup;
             }
             var target = this._searchPossibleTargets(e, skipGroup);
@@ -4802,6 +6239,7 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, {
             addListener(this.upperCanvasEl, "mousedown", this._onMouseDown);
             addListener(this.upperCanvasEl, "mousemove", this._onMouseMove);
             addListener(this.upperCanvasEl, "mousewheel", this._onMouseWheel);
+            addListener(this.upperCanvasEl, "mouseout", this._onMouseOut);
             addListener(this.upperCanvasEl, "touchstart", this._onMouseDown);
             addListener(this.upperCanvasEl, "touchmove", this._onMouseMove);
             if (typeof eventjs !== "undefined" && "add" in eventjs) {
@@ -4823,12 +6261,14 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, {
             this._onLongPress = this._onLongPress.bind(this);
             this._onOrientationChange = this._onOrientationChange.bind(this);
             this._onMouseWheel = this._onMouseWheel.bind(this);
+            this._onMouseOut = this._onMouseOut.bind(this);
         },
         removeListeners: function() {
             removeListener(fabric.window, "resize", this._onResize);
             removeListener(this.upperCanvasEl, "mousedown", this._onMouseDown);
             removeListener(this.upperCanvasEl, "mousemove", this._onMouseMove);
             removeListener(this.upperCanvasEl, "mousewheel", this._onMouseWheel);
+            removeListener(this.upperCanvasEl, "mouseout", this._onMouseOut);
             removeListener(this.upperCanvasEl, "touchstart", this._onMouseDown);
             removeListener(this.upperCanvasEl, "touchmove", this._onMouseMove);
             if (typeof eventjs !== "undefined" && "remove" in eventjs) {
@@ -4847,6 +6287,17 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, {
         },
         _onMouseWheel: function(e, self) {
             this.__onMouseWheel && this.__onMouseWheel(e, self);
+        },
+        _onMouseOut: function(e) {
+            var target = this._hoveredTarget;
+            this.fire("mouse:out", {
+                target: target,
+                e: e
+            });
+            this._hoveredTarget = null;
+            target && target.fire("mouseout", {
+                e: e
+            });
         },
         _onOrientationChange: function(e, self) {
             this.__onOrientationChange && this.__onOrientationChange(e, self);
@@ -4897,17 +6348,16 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, {
             return !!(target && (target.isMoving || target !== activeObject) || !target && !!activeObject || !target && !activeObject && !this._groupSelector || pointer && this._previousPointer && this.selection && (pointer.x !== this._previousPointer.x || pointer.y !== this._previousPointer.y));
         },
         __onMouseUp: function(e) {
-            var target;
+            var target, searchTarget = true, transform = this._currentTransform;
             if (this.isDrawingMode && this._isCurrentlyDrawing) {
                 this._onMouseUpInDrawingMode(e);
                 return;
             }
-            if (this._currentTransform) {
+            if (transform) {
                 this._finalizeCurrentTransform();
-                target = this._currentTransform.target;
-            } else {
-                target = this.findTarget(e, true);
+                searchTarget = !transform.actionPerformed;
             }
+            target = searchTarget ? this.findTarget(e, true) : transform.target;
             var shouldRender = this._shouldRender(target, this.getPointer(e));
             this._maybeGroupObjects(e);
             if (target) {
@@ -4918,10 +6368,6 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, {
         },
         _handleCursorAndEvent: function(e, target) {
             this._setCursorFromEvent(e, target);
-            var _this = this;
-            setTimeout(function() {
-                _this._setCursorFromEvent(e, target);
-            }, 50);
             this.fire("mouse:up", {
                 target: target,
                 e: e
@@ -5029,9 +6475,15 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, {
                 this._handleGrouping(e, target);
                 target = this.getActiveGroup();
             }
-            if (target && target.selectable && (target.__corner || !shouldGroup)) {
-                this._beforeTransform(e, target);
-                this._setupCurrentTransform(e, target);
+            if (target) {
+                if (target.selectable && (target.__corner || !shouldGroup)) {
+                    this._beforeTransform(e, target);
+                    this._setupCurrentTransform(e, target);
+                }
+                if (target !== this.getActiveGroup() && target !== this.getActiveObject()) {
+                    this.deactivateAll();
+                    this.setActiveObject(target, e);
+                }
             }
             shouldRender && this.renderAll();
             this.fire("mouse:down", {
@@ -5046,10 +6498,6 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, {
             this.stateful && target.saveState();
             if (target._findTargetCorner(this.getPointer(e))) {
                 this.onBeforeScaleRotate(target);
-            }
-            if (target !== this.getActiveGroup() && target !== this.getActiveObject()) {
-                this.deactivateAll();
-                this.setActiveObject(target, e);
             }
         },
         _clearSelection: function(e, target, pointer) {
@@ -5550,6 +6998,92 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, {
         }
     }
 });
+
+(function() {
+    var degreesToRadians = fabric.util.degreesToRadians, radiansToDegrees = fabric.util.radiansToDegrees;
+    fabric.util.object.extend(fabric.Canvas.prototype, {
+        __onTransformGesture: function(e, self) {
+            if (this.isDrawingMode || !e.touches || e.touches.length !== 2 || "gesture" !== self.gesture) {
+                return;
+            }
+            var target = this.findTarget(e);
+            if ("undefined" !== typeof target) {
+                this.__gesturesParams = {
+                    e: e,
+                    self: self,
+                    target: target
+                };
+                this.__gesturesRenderer();
+            }
+            this.fire("touch:gesture", {
+                target: target,
+                e: e,
+                self: self
+            });
+        },
+        __gesturesParams: null,
+        __gesturesRenderer: function() {
+            if (this.__gesturesParams === null || this._currentTransform === null) {
+                return;
+            }
+            var self = this.__gesturesParams.self, t = this._currentTransform, e = this.__gesturesParams.e;
+            t.action = "scale";
+            t.originX = t.originY = "center";
+            this._setOriginToCenter(t.target);
+            this._scaleObjectBy(self.scale, e);
+            if (self.rotation !== 0) {
+                t.action = "rotate";
+                this._rotateObjectByAngle(self.rotation, e);
+            }
+            this._setCenterToOrigin(t.target);
+            this.renderAll();
+            t.action = "drag";
+        },
+        __onDrag: function(e, self) {
+            this.fire("touch:drag", {
+                e: e,
+                self: self
+            });
+        },
+        __onOrientationChange: function(e, self) {
+            this.fire("touch:orientation", {
+                e: e,
+                self: self
+            });
+        },
+        __onShake: function(e, self) {
+            this.fire("touch:shake", {
+                e: e,
+                self: self
+            });
+        },
+        __onLongPress: function(e, self) {
+            this.fire("touch:longpress", {
+                e: e,
+                self: self
+            });
+        },
+        _scaleObjectBy: function(s, e) {
+            var t = this._currentTransform, target = t.target, lockScalingX = target.get("lockScalingX"), lockScalingY = target.get("lockScalingY");
+            if (lockScalingX && lockScalingY) {
+                return;
+            }
+            target._scaling = true;
+            var constraintPosition = target.translateToOriginPoint(target.getCenterPoint(), t.originX, t.originY), dim = target._getTransformedDimensions();
+            this._setObjectScale(new fabric.Point(t.scaleX * dim.x * s / target.scaleX, t.scaleY * dim.y * s / target.scaleY), t, lockScalingX, lockScalingY, null, target.get("lockScalingFlip"), dim);
+            target.setPositionByOrigin(constraintPosition, t.originX, t.originY);
+            this._fire("scaling", target, e);
+        },
+        _rotateObjectByAngle: function(curAngle, e) {
+            var t = this._currentTransform;
+            if (t.target.get("lockRotation")) {
+                return;
+            }
+            t.target.angle = radiansToDegrees(degreesToRadians(curAngle) + t.theta);
+            this._fire("rotating", t.target, e);
+        }
+    });
+})();
 
 (function(global) {
     "use strict";
@@ -6614,138 +8148,6 @@ fabric.util.object.extend(fabric.Object.prototype, {
     });
 })();
 
-fabric.util.object.extend(fabric.StaticCanvas.prototype, {
-    FX_DURATION: 500,
-    fxCenterObjectH: function(object, callbacks) {
-        callbacks = callbacks || {};
-        var empty = function() {}, onComplete = callbacks.onComplete || empty, onChange = callbacks.onChange || empty, _this = this;
-        fabric.util.animate({
-            startValue: object.get("left"),
-            endValue: this.getCenter().left,
-            duration: this.FX_DURATION,
-            onChange: function(value) {
-                object.set("left", value);
-                _this.renderAll();
-                onChange();
-            },
-            onComplete: function() {
-                object.setCoords();
-                onComplete();
-            }
-        });
-        return this;
-    },
-    fxCenterObjectV: function(object, callbacks) {
-        callbacks = callbacks || {};
-        var empty = function() {}, onComplete = callbacks.onComplete || empty, onChange = callbacks.onChange || empty, _this = this;
-        fabric.util.animate({
-            startValue: object.get("top"),
-            endValue: this.getCenter().top,
-            duration: this.FX_DURATION,
-            onChange: function(value) {
-                object.set("top", value);
-                _this.renderAll();
-                onChange();
-            },
-            onComplete: function() {
-                object.setCoords();
-                onComplete();
-            }
-        });
-        return this;
-    },
-    fxRemove: function(object, callbacks) {
-        callbacks = callbacks || {};
-        var empty = function() {}, onComplete = callbacks.onComplete || empty, onChange = callbacks.onChange || empty, _this = this;
-        fabric.util.animate({
-            startValue: object.get("opacity"),
-            endValue: 0,
-            duration: this.FX_DURATION,
-            onStart: function() {
-                object.set("active", false);
-            },
-            onChange: function(value) {
-                object.set("opacity", value);
-                _this.renderAll();
-                onChange();
-            },
-            onComplete: function() {
-                _this.remove(object);
-                onComplete();
-            }
-        });
-        return this;
-    }
-});
-
-fabric.util.object.extend(fabric.Object.prototype, {
-    animate: function() {
-        if (arguments[0] && typeof arguments[0] === "object") {
-            var propsToAnimate = [], prop, skipCallbacks;
-            for (prop in arguments[0]) {
-                propsToAnimate.push(prop);
-            }
-            for (var i = 0, len = propsToAnimate.length; i < len; i++) {
-                prop = propsToAnimate[i];
-                skipCallbacks = i !== len - 1;
-                this._animate(prop, arguments[0][prop], arguments[1], skipCallbacks);
-            }
-        } else {
-            this._animate.apply(this, arguments);
-        }
-        return this;
-    },
-    _animate: function(property, to, options, skipCallbacks) {
-        var _this = this, propPair;
-        to = to.toString();
-        if (!options) {
-            options = {};
-        } else {
-            options = fabric.util.object.clone(options);
-        }
-        if (~property.indexOf(".")) {
-            propPair = property.split(".");
-        }
-        var currentValue = propPair ? this.get(propPair[0])[propPair[1]] : this.get(property);
-        if (!("from" in options)) {
-            options.from = currentValue;
-        }
-        if (~to.indexOf("=")) {
-            to = currentValue + parseFloat(to.replace("=", ""));
-        } else {
-            to = parseFloat(to);
-        }
-        fabric.util.animate({
-            startValue: options.from,
-            endValue: to,
-            byValue: options.by,
-            easing: options.easing,
-            duration: options.duration,
-            abort: options.abort && function() {
-                return options.abort.call(_this);
-            },
-            onChange: function(value) {
-                if (propPair) {
-                    _this[propPair[0]][propPair[1]] = value;
-                } else {
-                    _this.set(property, value);
-                }
-                if (skipCallbacks) {
-                    return;
-                }
-                options.onChange && options.onChange();
-            },
-            onComplete: function() {
-                if (skipCallbacks) {
-                    return;
-                }
-                _this.setCoords();
-                options.onComplete && options.onComplete();
-            }
-        });
-    }
-});
-
 (function(global) {
     "use strict";
     var fabric = global.fabric || (global.fabric = {}), extend = fabric.util.object.extend, coordProps = {
@@ -7287,10 +8689,6 @@ fabric.util.object.extend(fabric.Object.prototype, {
             if (!("left" in options)) {
                 this.left = this.minX;
             }
-            this.pathOffset = {
-                x: this.minX + this.width / 2,
-                y: this.minY + this.height / 2
-            };
         },
         _calcDimensions: function() {
             var points = this.points, minX = min(points, "x"), minY = min(points, "y"), maxX = max(points, "x"), maxY = max(points, "y");
@@ -7298,24 +8696,27 @@ fabric.util.object.extend(fabric.Object.prototype, {
             this.height = maxY - minY || 0;
             this.minX = minX || 0, this.minY = minY || 0;
         },
+        _applyPointOffset: function() {
+            this.points.forEach(function(p) {
+                p.x -= this.minX + this.width / 2;
+                p.y -= this.minY + this.height / 2;
+            }, this);
+        },
         toObject: function(propertiesToInclude) {
             return extend(this.callSuper("toObject", propertiesToInclude), {
                 points: this.points.concat()
             });
         },
         toSVG: function(reviver) {
-            var points = [], addTransform, markup = this._createBaseSVGMarkup();
+            var points = [], markup = this._createBaseSVGMarkup();
             for (var i = 0, len = this.points.length; i < len; i++) {
                 points.push(toFixed(this.points[i].x, 2), ",", toFixed(this.points[i].y, 2), " ");
             }
-            if (!(this.group && this.group.type === "path-group")) {
-                addTransform = " translate(" + -this.pathOffset.x + ", " + -this.pathOffset.y + ") ";
-            }
-            markup.push("<", this.type, " ", 'points="', points.join(""), '" style="', this.getSvgStyles(), '" transform="', this.getSvgTransform(), addTransform, " ", this.getSvgTransformMatrix(), '"/>\n');
+            markup.push("<", this.type, " ", 'points="', points.join(""), '" style="', this.getSvgStyles(), '" transform="', this.getSvgTransform(), " ", this.getSvgTransformMatrix(), '"/>\n');
             return reviver ? reviver(markup.join("")) : markup.join("");
         },
-        _render: function(ctx, noTransform) {
-            if (!this.commonRender(ctx, noTransform)) {
+        _render: function(ctx) {
+            if (!this.commonRender(ctx)) {
                 return;
             }
             this._renderFill(ctx);
@@ -7324,13 +8725,18 @@ fabric.util.object.extend(fabric.Object.prototype, {
                 this._renderStroke(ctx);
             }
         },
-        commonRender: function(ctx, noTransform) {
+        commonRender: function(ctx) {
             var point, len = this.points.length;
             if (!len || isNaN(this.points[len - 1].y)) {
                 return false;
             }
-            noTransform || ctx.translate(-this.pathOffset.x, -this.pathOffset.y);
             ctx.beginPath();
+            if (this._applyPointOffset) {
+                if (!(this.group && this.group.type === "path-group")) {
+                    this._applyPointOffset();
+                }
+                this._applyPointOffset = null;
+            }
             ctx.moveTo(this.points[0].x, this.points[0].y);
             for (var i = 0; i < len; i++) {
                 point = this.points[i];
@@ -8597,796 +10003,6 @@ fabric.util.object.extend(fabric.Object.prototype, {
     };
     fabric.Image.async = true;
     fabric.Image.pngCompression = 1;
-})(typeof exports !== "undefined" ? exports : this);
-
-fabric.util.object.extend(fabric.Object.prototype, {
-    _getAngleValueForStraighten: function() {
-        var angle = this.getAngle() % 360;
-        if (angle > 0) {
-            return Math.round((angle - 1) / 90) * 90;
-        }
-        return Math.round(angle / 90) * 90;
-    },
-    straighten: function() {
-        this.setAngle(this._getAngleValueForStraighten());
-        return this;
-    },
-    fxStraighten: function(callbacks) {
-        callbacks = callbacks || {};
-        var empty = function() {}, onComplete = callbacks.onComplete || empty, onChange = callbacks.onChange || empty, _this = this;
-        fabric.util.animate({
-            startValue: this.get("angle"),
-            endValue: this._getAngleValueForStraighten(),
-            duration: this.FX_DURATION,
-            onChange: function(value) {
-                _this.setAngle(value);
-                onChange();
-            },
-            onComplete: function() {
-                _this.setCoords();
-                onComplete();
-            },
-            onStart: function() {
-                _this.set("active", false);
-            }
-        });
-        return this;
-    }
-});
-
-fabric.util.object.extend(fabric.StaticCanvas.prototype, {
-    straightenObject: function(object) {
-        object.straighten();
-        this.renderAll();
-        return this;
-    },
-    fxStraightenObject: function(object) {
-        object.fxStraighten({
-            onChange: this.renderAll.bind(this)
-        });
-        return this;
-    }
-});
-
-fabric.Image.filters = fabric.Image.filters || {};
-
-fabric.Image.filters.BaseFilter = fabric.util.createClass({
-    type: "BaseFilter",
-    initialize: function(options) {
-        if (options) {
-            this.setOptions(options);
-        }
-    },
-    setOptions: function(options) {
-        for (var prop in options) {
-            this[prop] = options[prop];
-        }
-    },
-    toObject: function() {
-        return {
-            type: this.type
-        };
-    },
-    toJSON: function() {
-        return this.toObject();
-    }
-});
-
-(function(global) {
-    "use strict";
-    var fabric = global.fabric || (global.fabric = {}), extend = fabric.util.object.extend;
-    fabric.Image.filters.Brightness = fabric.util.createClass(fabric.Image.filters.BaseFilter, {
-        type: "Brightness",
-        initialize: function(options) {
-            options = options || {};
-            this.brightness = options.brightness || 0;
-        },
-        applyTo: function(canvasEl) {
-            var context = canvasEl.getContext("2d"), imageData = context.getImageData(0, 0, canvasEl.width, canvasEl.height), data = imageData.data, brightness = this.brightness;
-            for (var i = 0, len = data.length; i < len; i += 4) {
-                data[i] += brightness;
-                data[i + 1] += brightness;
-                data[i + 2] += brightness;
-            }
-            context.putImageData(imageData, 0, 0);
-        },
-        toObject: function() {
-            return extend(this.callSuper("toObject"), {
-                brightness: this.brightness
-            });
-        }
-    });
-    fabric.Image.filters.Brightness.fromObject = function(object) {
-        return new fabric.Image.filters.Brightness(object);
-    };
-})(typeof exports !== "undefined" ? exports : this);
-
-(function(global) {
-    "use strict";
-    var fabric = global.fabric || (global.fabric = {}), extend = fabric.util.object.extend;
-    fabric.Image.filters.Convolute = fabric.util.createClass(fabric.Image.filters.BaseFilter, {
-        type: "Convolute",
-        initialize: function(options) {
-            options = options || {};
-            this.opaque = options.opaque;
-            this.matrix = options.matrix || [ 0, 0, 0, 0, 1, 0, 0, 0, 0 ];
-        },
-        applyTo: function(canvasEl) {
-            var weights = this.matrix, context = canvasEl.getContext("2d"), pixels = context.getImageData(0, 0, canvasEl.width, canvasEl.height), side = Math.round(Math.sqrt(weights.length)), halfSide = Math.floor(side / 2), src = pixels.data, sw = pixels.width, sh = pixels.height, output = context.createImageData(sw, sh), dst = output.data, alphaFac = this.opaque ? 1 : 0, r, g, b, a, dstOff, scx, scy, srcOff, wt;
-            for (var y = 0; y < sh; y++) {
-                for (var x = 0; x < sw; x++) {
-                    dstOff = (y * sw + x) * 4;
-                    r = 0;
-                    g = 0;
-                    b = 0;
-                    a = 0;
-                    for (var cy = 0; cy < side; cy++) {
-                        for (var cx = 0; cx < side; cx++) {
-                            scy = y + cy - halfSide;
-                            scx = x + cx - halfSide;
-                            if (scy < 0 || scy > sh || scx < 0 || scx > sw) {
-                                continue;
-                            }
-                            srcOff = (scy * sw + scx) * 4;
-                            wt = weights[cy * side + cx];
-                            r += src[srcOff] * wt;
-                            g += src[srcOff + 1] * wt;
-                            b += src[srcOff + 2] * wt;
-                            a += src[srcOff + 3] * wt;
-                        }
-                    }
-                    dst[dstOff] = r;
-                    dst[dstOff + 1] = g;
-                    dst[dstOff + 2] = b;
-                    dst[dstOff + 3] = a + alphaFac * (255 - a);
-                }
-            }
-            context.putImageData(output, 0, 0);
-        },
-        toObject: function() {
-            return extend(this.callSuper("toObject"), {
-                opaque: this.opaque,
-                matrix: this.matrix
-            });
-        }
-    });
-    fabric.Image.filters.Convolute.fromObject = function(object) {
-        return new fabric.Image.filters.Convolute(object);
-    };
-})(typeof exports !== "undefined" ? exports : this);
-
-(function(global) {
-    "use strict";
-    var fabric = global.fabric || (global.fabric = {}), extend = fabric.util.object.extend;
-    fabric.Image.filters.GradientTransparency = fabric.util.createClass(fabric.Image.filters.BaseFilter, {
-        type: "GradientTransparency",
-        initialize: function(options) {
-            options = options || {};
-            this.threshold = options.threshold || 100;
-        },
-        applyTo: function(canvasEl) {
-            var context = canvasEl.getContext("2d"), imageData = context.getImageData(0, 0, canvasEl.width, canvasEl.height), data = imageData.data, threshold = this.threshold, total = data.length;
-            for (var i = 0, len = data.length; i < len; i += 4) {
-                data[i + 3] = threshold + 255 * (total - i) / total;
-            }
-            context.putImageData(imageData, 0, 0);
-        },
-        toObject: function() {
-            return extend(this.callSuper("toObject"), {
-                threshold: this.threshold
-            });
-        }
-    });
-    fabric.Image.filters.GradientTransparency.fromObject = function(object) {
-        return new fabric.Image.filters.GradientTransparency(object);
-    };
-})(typeof exports !== "undefined" ? exports : this);
-
-(function(global) {
-    "use strict";
-    var fabric = global.fabric || (global.fabric = {});
-    fabric.Image.filters.Grayscale = fabric.util.createClass(fabric.Image.filters.BaseFilter, {
-        type: "Grayscale",
-        applyTo: function(canvasEl) {
-            var context = canvasEl.getContext("2d"), imageData = context.getImageData(0, 0, canvasEl.width, canvasEl.height), data = imageData.data, len = imageData.width * imageData.height * 4, index = 0, average;
-            while (index < len) {
-                average = (data[index] + data[index + 1] + data[index + 2]) / 3;
-                data[index] = average;
-                data[index + 1] = average;
-                data[index + 2] = average;
-                index += 4;
-            }
-            context.putImageData(imageData, 0, 0);
-        }
-    });
-    fabric.Image.filters.Grayscale.fromObject = function() {
-        return new fabric.Image.filters.Grayscale();
-    };
-})(typeof exports !== "undefined" ? exports : this);
-
-(function(global) {
-    "use strict";
-    var fabric = global.fabric || (global.fabric = {});
-    fabric.Image.filters.Invert = fabric.util.createClass(fabric.Image.filters.BaseFilter, {
-        type: "Invert",
-        applyTo: function(canvasEl) {
-            var context = canvasEl.getContext("2d"), imageData = context.getImageData(0, 0, canvasEl.width, canvasEl.height), data = imageData.data, iLen = data.length, i;
-            for (i = 0; i < iLen; i += 4) {
-                data[i] = 255 - data[i];
-                data[i + 1] = 255 - data[i + 1];
-                data[i + 2] = 255 - data[i + 2];
-            }
-            context.putImageData(imageData, 0, 0);
-        }
-    });
-    fabric.Image.filters.Invert.fromObject = function() {
-        return new fabric.Image.filters.Invert();
-    };
-})(typeof exports !== "undefined" ? exports : this);
-
-(function(global) {
-    "use strict";
-    var fabric = global.fabric || (global.fabric = {}), extend = fabric.util.object.extend;
-    fabric.Image.filters.Mask = fabric.util.createClass(fabric.Image.filters.BaseFilter, {
-        type: "Mask",
-        initialize: function(options) {
-            options = options || {};
-            this.mask = options.mask;
-            this.channel = [ 0, 1, 2, 3 ].indexOf(options.channel) > -1 ? options.channel : 0;
-        },
-        applyTo: function(canvasEl) {
-            if (!this.mask) {
-                return;
-            }
-            var context = canvasEl.getContext("2d"), imageData = context.getImageData(0, 0, canvasEl.width, canvasEl.height), data = imageData.data, maskEl = this.mask.getElement(), maskCanvasEl = fabric.util.createCanvasElement(), channel = this.channel, i, iLen = imageData.width * imageData.height * 4;
-            maskCanvasEl.width = canvasEl.width;
-            maskCanvasEl.height = canvasEl.height;
-            maskCanvasEl.getContext("2d").drawImage(maskEl, 0, 0, canvasEl.width, canvasEl.height);
-            var maskImageData = maskCanvasEl.getContext("2d").getImageData(0, 0, canvasEl.width, canvasEl.height), maskData = maskImageData.data;
-            for (i = 0; i < iLen; i += 4) {
-                data[i + 3] = maskData[i + channel];
-            }
-            context.putImageData(imageData, 0, 0);
-        },
-        toObject: function() {
-            return extend(this.callSuper("toObject"), {
-                mask: this.mask.toObject(),
-                channel: this.channel
-            });
-        }
-    });
-    fabric.Image.filters.Mask.fromObject = function(object, callback) {
-        fabric.util.loadImage(object.mask.src, function(img) {
-            object.mask = new fabric.Image(img, object.mask);
-            callback && callback(new fabric.Image.filters.Mask(object));
-        });
-    };
-    fabric.Image.filters.Mask.async = true;
-})(typeof exports !== "undefined" ? exports : this);
-
-(function(global) {
-    "use strict";
-    var fabric = global.fabric || (global.fabric = {}), extend = fabric.util.object.extend;
-    fabric.Image.filters.Noise = fabric.util.createClass(fabric.Image.filters.BaseFilter, {
-        type: "Noise",
-        initialize: function(options) {
-            options = options || {};
-            this.noise = options.noise || 0;
-        },
-        applyTo: function(canvasEl) {
-            var context = canvasEl.getContext("2d"), imageData = context.getImageData(0, 0, canvasEl.width, canvasEl.height), data = imageData.data, noise = this.noise, rand;
-            for (var i = 0, len = data.length; i < len; i += 4) {
-                rand = (.5 - Math.random()) * noise;
-                data[i] += rand;
-                data[i + 1] += rand;
-                data[i + 2] += rand;
-            }
-            context.putImageData(imageData, 0, 0);
-        },
-        toObject: function() {
-            return extend(this.callSuper("toObject"), {
-                noise: this.noise
-            });
-        }
-    });
-    fabric.Image.filters.Noise.fromObject = function(object) {
-        return new fabric.Image.filters.Noise(object);
-    };
-})(typeof exports !== "undefined" ? exports : this);
-
-(function(global) {
-    "use strict";
-    var fabric = global.fabric || (global.fabric = {}), extend = fabric.util.object.extend;
-    fabric.Image.filters.Pixelate = fabric.util.createClass(fabric.Image.filters.BaseFilter, {
-        type: "Pixelate",
-        initialize: function(options) {
-            options = options || {};
-            this.blocksize = options.blocksize || 4;
-        },
-        applyTo: function(canvasEl) {
-            var context = canvasEl.getContext("2d"), imageData = context.getImageData(0, 0, canvasEl.width, canvasEl.height), data = imageData.data, iLen = imageData.height, jLen = imageData.width, index, i, j, r, g, b, a;
-            for (i = 0; i < iLen; i += this.blocksize) {
-                for (j = 0; j < jLen; j += this.blocksize) {
-                    index = i * 4 * jLen + j * 4;
-                    r = data[index];
-                    g = data[index + 1];
-                    b = data[index + 2];
-                    a = data[index + 3];
-                    for (var _i = i, _ilen = i + this.blocksize; _i < _ilen; _i++) {
-                        for (var _j = j, _jlen = j + this.blocksize; _j < _jlen; _j++) {
-                            index = _i * 4 * jLen + _j * 4;
-                            data[index] = r;
-                            data[index + 1] = g;
-                            data[index + 2] = b;
-                            data[index + 3] = a;
-                        }
-                    }
-                }
-            }
-            context.putImageData(imageData, 0, 0);
-        },
-        toObject: function() {
-            return extend(this.callSuper("toObject"), {
-                blocksize: this.blocksize
-            });
-        }
-    });
-    fabric.Image.filters.Pixelate.fromObject = function(object) {
-        return new fabric.Image.filters.Pixelate(object);
-    };
-})(typeof exports !== "undefined" ? exports : this);
-
-(function(global) {
-    "use strict";
-    var fabric = global.fabric || (global.fabric = {}), extend = fabric.util.object.extend;
-    fabric.Image.filters.RemoveWhite = fabric.util.createClass(fabric.Image.filters.BaseFilter, {
-        type: "RemoveWhite",
-        initialize: function(options) {
-            options = options || {};
-            this.threshold = options.threshold || 30;
-            this.distance = options.distance || 20;
-        },
-        applyTo: function(canvasEl) {
-            var context = canvasEl.getContext("2d"), imageData = context.getImageData(0, 0, canvasEl.width, canvasEl.height), data = imageData.data, threshold = this.threshold, distance = this.distance, limit = 255 - threshold, abs = Math.abs, r, g, b;
-            for (var i = 0, len = data.length; i < len; i += 4) {
-                r = data[i];
-                g = data[i + 1];
-                b = data[i + 2];
-                if (r > limit && g > limit && b > limit && abs(r - g) < distance && abs(r - b) < distance && abs(g - b) < distance) {
-                    data[i + 3] = 0;
-                }
-            }
-            context.putImageData(imageData, 0, 0);
-        },
-        toObject: function() {
-            return extend(this.callSuper("toObject"), {
-                threshold: this.threshold,
-                distance: this.distance
-            });
-        }
-    });
-    fabric.Image.filters.RemoveWhite.fromObject = function(object) {
-        return new fabric.Image.filters.RemoveWhite(object);
-    };
-})(typeof exports !== "undefined" ? exports : this);
-
-(function(global) {
-    "use strict";
-    var fabric = global.fabric || (global.fabric = {});
-    fabric.Image.filters.Sepia = fabric.util.createClass(fabric.Image.filters.BaseFilter, {
-        type: "Sepia",
-        applyTo: function(canvasEl) {
-            var context = canvasEl.getContext("2d"), imageData = context.getImageData(0, 0, canvasEl.width, canvasEl.height), data = imageData.data, iLen = data.length, i, avg;
-            for (i = 0; i < iLen; i += 4) {
-                avg = .3 * data[i] + .59 * data[i + 1] + .11 * data[i + 2];
-                data[i] = avg + 100;
-                data[i + 1] = avg + 50;
-                data[i + 2] = avg + 255;
-            }
-            context.putImageData(imageData, 0, 0);
-        }
-    });
-    fabric.Image.filters.Sepia.fromObject = function() {
-        return new fabric.Image.filters.Sepia();
-    };
-})(typeof exports !== "undefined" ? exports : this);
-
-(function(global) {
-    "use strict";
-    var fabric = global.fabric || (global.fabric = {});
-    fabric.Image.filters.Sepia2 = fabric.util.createClass(fabric.Image.filters.BaseFilter, {
-        type: "Sepia2",
-        applyTo: function(canvasEl) {
-            var context = canvasEl.getContext("2d"), imageData = context.getImageData(0, 0, canvasEl.width, canvasEl.height), data = imageData.data, iLen = data.length, i, r, g, b;
-            for (i = 0; i < iLen; i += 4) {
-                r = data[i];
-                g = data[i + 1];
-                b = data[i + 2];
-                data[i] = (r * .393 + g * .769 + b * .189) / 1.351;
-                data[i + 1] = (r * .349 + g * .686 + b * .168) / 1.203;
-                data[i + 2] = (r * .272 + g * .534 + b * .131) / 2.14;
-            }
-            context.putImageData(imageData, 0, 0);
-        }
-    });
-    fabric.Image.filters.Sepia2.fromObject = function() {
-        return new fabric.Image.filters.Sepia2();
-    };
-})(typeof exports !== "undefined" ? exports : this);
-
-(function(global) {
-    "use strict";
-    var fabric = global.fabric || (global.fabric = {}), extend = fabric.util.object.extend;
-    fabric.Image.filters.Tint = fabric.util.createClass(fabric.Image.filters.BaseFilter, {
-        type: "Tint",
-        initialize: function(options) {
-            options = options || {};
-            this.color = options.color || "#000000";
-            this.opacity = typeof options.opacity !== "undefined" ? options.opacity : new fabric.Color(this.color).getAlpha();
-        },
-        applyTo: function(canvasEl) {
-            var context = canvasEl.getContext("2d"), imageData = context.getImageData(0, 0, canvasEl.width, canvasEl.height), data = imageData.data, iLen = data.length, i, tintR, tintG, tintB, r, g, b, alpha1, source;
-            source = new fabric.Color(this.color).getSource();
-            tintR = source[0] * this.opacity;
-            tintG = source[1] * this.opacity;
-            tintB = source[2] * this.opacity;
-            alpha1 = 1 - this.opacity;
-            for (i = 0; i < iLen; i += 4) {
-                r = data[i];
-                g = data[i + 1];
-                b = data[i + 2];
-                data[i] = tintR + r * alpha1;
-                data[i + 1] = tintG + g * alpha1;
-                data[i + 2] = tintB + b * alpha1;
-            }
-            context.putImageData(imageData, 0, 0);
-        },
-        toObject: function() {
-            return extend(this.callSuper("toObject"), {
-                color: this.color,
-                opacity: this.opacity
-            });
-        }
-    });
-    fabric.Image.filters.Tint.fromObject = function(object) {
-        return new fabric.Image.filters.Tint(object);
-    };
-})(typeof exports !== "undefined" ? exports : this);
-
-(function(global) {
-    "use strict";
-    var fabric = global.fabric || (global.fabric = {}), extend = fabric.util.object.extend;
-    fabric.Image.filters.Multiply = fabric.util.createClass(fabric.Image.filters.BaseFilter, {
-        type: "Multiply",
-        initialize: function(options) {
-            options = options || {};
-            this.color = options.color || "#000000";
-        },
-        applyTo: function(canvasEl) {
-            var context = canvasEl.getContext("2d"), imageData = context.getImageData(0, 0, canvasEl.width, canvasEl.height), data = imageData.data, iLen = data.length, i, source;
-            source = new fabric.Color(this.color).getSource();
-            for (i = 0; i < iLen; i += 4) {
-                data[i] *= source[0] / 255;
-                data[i + 1] *= source[1] / 255;
-                data[i + 2] *= source[2] / 255;
-            }
-            context.putImageData(imageData, 0, 0);
-        },
-        toObject: function() {
-            return extend(this.callSuper("toObject"), {
-                color: this.color
-            });
-        }
-    });
-    fabric.Image.filters.Multiply.fromObject = function(object) {
-        return new fabric.Image.filters.Multiply(object);
-    };
-})(typeof exports !== "undefined" ? exports : this);
-
-(function(global) {
-    "use strict";
-    var fabric = global.fabric;
-    fabric.Image.filters.Blend = fabric.util.createClass({
-        type: "Blend",
-        initialize: function(options) {
-            options = options || {};
-            this.color = options.color || "#000";
-            this.image = options.image || false;
-            this.mode = options.mode || "multiply";
-            this.alpha = options.alpha || 1;
-        },
-        applyTo: function(canvasEl) {
-            var context = canvasEl.getContext("2d"), imageData = context.getImageData(0, 0, canvasEl.width, canvasEl.height), data = imageData.data, tr, tg, tb, r, g, b, _r, _g, _b, source, isImage = false;
-            if (this.image) {
-                isImage = true;
-                var _el = fabric.util.createCanvasElement();
-                _el.width = this.image.width;
-                _el.height = this.image.height;
-                var tmpCanvas = new fabric.StaticCanvas(_el);
-                tmpCanvas.add(this.image);
-                var context2 = tmpCanvas.getContext("2d");
-                source = context2.getImageData(0, 0, tmpCanvas.width, tmpCanvas.height).data;
-            } else {
-                source = new fabric.Color(this.color).getSource();
-                tr = source[0] * this.alpha;
-                tg = source[1] * this.alpha;
-                tb = source[2] * this.alpha;
-            }
-            for (var i = 0, len = data.length; i < len; i += 4) {
-                r = data[i];
-                g = data[i + 1];
-                b = data[i + 2];
-                if (isImage) {
-                    tr = source[i] * this.alpha;
-                    tg = source[i + 1] * this.alpha;
-                    tb = source[i + 2] * this.alpha;
-                }
-                switch (this.mode) {
-                  case "multiply":
-                    data[i] = r * tr / 255;
-                    data[i + 1] = g * tg / 255;
-                    data[i + 2] = b * tb / 255;
-                    break;
-
-                  case "screen":
-                    data[i] = 1 - (1 - r) * (1 - tr);
-                    data[i + 1] = 1 - (1 - g) * (1 - tg);
-                    data[i + 2] = 1 - (1 - b) * (1 - tb);
-                    break;
-
-                  case "add":
-                    data[i] = Math.min(255, r + tr);
-                    data[i + 1] = Math.min(255, g + tg);
-                    data[i + 2] = Math.min(255, b + tb);
-                    break;
-
-                  case "diff":
-                  case "difference":
-                    data[i] = Math.abs(r - tr);
-                    data[i + 1] = Math.abs(g - tg);
-                    data[i + 2] = Math.abs(b - tb);
-                    break;
-
-                  case "subtract":
-                    _r = r - tr;
-                    _g = g - tg;
-                    _b = b - tb;
-                    data[i] = _r < 0 ? 0 : _r;
-                    data[i + 1] = _g < 0 ? 0 : _g;
-                    data[i + 2] = _b < 0 ? 0 : _b;
-                    break;
-
-                  case "darken":
-                    data[i] = Math.min(r, tr);
-                    data[i + 1] = Math.min(g, tg);
-                    data[i + 2] = Math.min(b, tb);
-                    break;
-
-                  case "lighten":
-                    data[i] = Math.max(r, tr);
-                    data[i + 1] = Math.max(g, tg);
-                    data[i + 2] = Math.max(b, tb);
-                    break;
-                }
-            }
-            context.putImageData(imageData, 0, 0);
-        },
-        toObject: function() {
-            return {
-                color: this.color,
-                image: this.image,
-                mode: this.mode,
-                alpha: this.alpha
-            };
-        }
-    });
-    fabric.Image.filters.Blend.fromObject = function(object) {
-        return new fabric.Image.filters.Blend(object);
-    };
-})(typeof exports !== "undefined" ? exports : this);
-
-(function(global) {
-    "use strict";
-    var fabric = global.fabric || (global.fabric = {}), pow = Math.pow, floor = Math.floor, sqrt = Math.sqrt, abs = Math.abs, max = Math.max, round = Math.round, sin = Math.sin, ceil = Math.ceil;
-    fabric.Image.filters.Resize = fabric.util.createClass(fabric.Image.filters.BaseFilter, {
-        type: "Resize",
-        resizeType: "hermite",
-        scaleX: 0,
-        scaleY: 0,
-        lanczosLobes: 3,
-        applyTo: function(canvasEl, scaleX, scaleY) {
-            this.rcpScaleX = 1 / scaleX;
-            this.rcpScaleY = 1 / scaleY;
-            var oW = canvasEl.width, oH = canvasEl.height, dW = round(oW * scaleX), dH = round(oH * scaleY), imageData;
-            if (this.resizeType === "sliceHack") {
-                imageData = this.sliceByTwo(canvasEl, oW, oH, dW, dH);
-            }
-            if (this.resizeType === "hermite") {
-                imageData = this.hermiteFastResize(canvasEl, oW, oH, dW, dH);
-            }
-            if (this.resizeType === "bilinear") {
-                imageData = this.bilinearFiltering(canvasEl, oW, oH, dW, dH);
-            }
-            if (this.resizeType === "lanczos") {
-                imageData = this.lanczosResize(canvasEl, oW, oH, dW, dH);
-            }
-            canvasEl.width = dW;
-            canvasEl.height = dH;
-            canvasEl.getContext("2d").putImageData(imageData, 0, 0);
-        },
-        sliceByTwo: function(canvasEl, width, height, newWidth, newHeight) {
-            var context = canvasEl.getContext("2d"), imageData, multW = .5, multH = .5, signW = 1, signH = 1, doneW = false, doneH = false, stepW = width, stepH = height, tmpCanvas = fabric.util.createCanvasElement(), tmpCtx = tmpCanvas.getContext("2d");
-            newWidth = floor(newWidth);
-            newHeight = floor(newHeight);
-            tmpCanvas.width = max(newWidth, width);
-            tmpCanvas.height = max(newHeight, height);
-            if (newWidth > width) {
-                multW = 2;
-                signW = -1;
-            }
-            if (newHeight > height) {
-                multH = 2;
-                signH = -1;
-            }
-            imageData = context.getImageData(0, 0, width, height);
-            canvasEl.width = max(newWidth, width);
-            canvasEl.height = max(newHeight, height);
-            context.putImageData(imageData, 0, 0);
-            while (!doneW || !doneH) {
-                width = stepW;
-                height = stepH;
-                if (newWidth * signW < floor(stepW * multW * signW)) {
-                    stepW = floor(stepW * multW);
-                } else {
-                    stepW = newWidth;
-                    doneW = true;
-                }
-                if (newHeight * signH < floor(stepH * multH * signH)) {
-                    stepH = floor(stepH * multH);
-                } else {
-                    stepH = newHeight;
-                    doneH = true;
-                }
-                imageData = context.getImageData(0, 0, width, height);
-                tmpCtx.putImageData(imageData, 0, 0);
-                context.clearRect(0, 0, stepW, stepH);
-                context.drawImage(tmpCanvas, 0, 0, width, height, 0, 0, stepW, stepH);
-            }
-            return context.getImageData(0, 0, newWidth, newHeight);
-        },
-        lanczosResize: function(canvasEl, oW, oH, dW, dH) {
-            function lanczosCreate(lobes) {
-                return function(x) {
-                    if (x > lobes) {
-                        return 0;
-                    }
-                    x *= Math.PI;
-                    if (abs(x) < 1e-16) {
-                        return 1;
-                    }
-                    var xx = x / lobes;
-                    return sin(x) * sin(xx) / x / xx;
-                };
-            }
-            function process(u) {
-                var v, i, weight, idx, a, red, green, blue, alpha, fX, fY;
-                center.x = (u + .5) * ratioX;
-                icenter.x = floor(center.x);
-                for (v = 0; v < dH; v++) {
-                    center.y = (v + .5) * ratioY;
-                    icenter.y = floor(center.y);
-                    a = 0, red = 0, green = 0, blue = 0, alpha = 0;
-                    for (i = icenter.x - range2X; i <= icenter.x + range2X; i++) {
-                        if (i < 0 || i >= oW) {
-                            continue;
-                        }
-                        fX = floor(1e3 * abs(i - center.x));
-                        if (!cacheLanc[fX]) {
-                            cacheLanc[fX] = {};
-                        }
-                        for (var j = icenter.y - range2Y; j <= icenter.y + range2Y; j++) {
-                            if (j < 0 || j >= oH) {
-                                continue;
-                            }
-                            fY = floor(1e3 * abs(j - center.y));
-                            if (!cacheLanc[fX][fY]) {
-                                cacheLanc[fX][fY] = lanczos(sqrt(pow(fX * rcpRatioX, 2) + pow(fY * rcpRatioY, 2)) / 1e3);
-                            }
-                            weight = cacheLanc[fX][fY];
-                            if (weight > 0) {
-                                idx = (j * oW + i) * 4;
-                                a += weight;
-                                red += weight * srcData[idx];
-                                green += weight * srcData[idx + 1];
-                                blue += weight * srcData[idx + 2];
-                                alpha += weight * srcData[idx + 3];
-                            }
-                        }
-                    }
-                    idx = (v * dW + u) * 4;
-                    destData[idx] = red / a;
-                    destData[idx + 1] = green / a;
-                    destData[idx + 2] = blue / a;
-                    destData[idx + 3] = alpha / a;
-                }
-                if (++u < dW) {
-                    return process(u);
-                } else {
-                    return destImg;
-                }
-            }
-            var context = canvasEl.getContext("2d"), srcImg = context.getImageData(0, 0, oW, oH), destImg = context.getImageData(0, 0, dW, dH), srcData = srcImg.data, destData = destImg.data, lanczos = lanczosCreate(this.lanczosLobes), ratioX = this.rcpScaleX, ratioY = this.rcpScaleY, rcpRatioX = 2 / this.rcpScaleX, rcpRatioY = 2 / this.rcpScaleY, range2X = ceil(ratioX * this.lanczosLobes / 2), range2Y = ceil(ratioY * this.lanczosLobes / 2), cacheLanc = {}, center = {}, icenter = {};
-            return process(0);
-        },
-        bilinearFiltering: function(canvasEl, w, h, w2, h2) {
-            var a, b, c, d, x, y, i, j, xDiff, yDiff, chnl, color, offset = 0, origPix, ratioX = this.rcpScaleX, ratioY = this.rcpScaleY, context = canvasEl.getContext("2d"), w4 = 4 * (w - 1), img = context.getImageData(0, 0, w, h), pixels = img.data, destImage = context.getImageData(0, 0, w2, h2), destPixels = destImage.data;
-            for (i = 0; i < h2; i++) {
-                for (j = 0; j < w2; j++) {
-                    x = floor(ratioX * j);
-                    y = floor(ratioY * i);
-                    xDiff = ratioX * j - x;
-                    yDiff = ratioY * i - y;
-                    origPix = 4 * (y * w + x);
-                    for (chnl = 0; chnl < 4; chnl++) {
-                        a = pixels[origPix + chnl];
-                        b = pixels[origPix + 4 + chnl];
-                        c = pixels[origPix + w4 + chnl];
-                        d = pixels[origPix + w4 + 4 + chnl];
-                        color = a * (1 - xDiff) * (1 - yDiff) + b * xDiff * (1 - yDiff) + c * yDiff * (1 - xDiff) + d * xDiff * yDiff;
-                        destPixels[offset++] = color;
-                    }
-                }
-            }
-            return destImage;
-        },
-        hermiteFastResize: function(canvasEl, oW, oH, dW, dH) {
-            var ratioW = this.rcpScaleX, ratioH = this.rcpScaleY, ratioWHalf = ceil(ratioW / 2), ratioHHalf = ceil(ratioH / 2), context = canvasEl.getContext("2d"), img = context.getImageData(0, 0, oW, oH), data = img.data, img2 = context.getImageData(0, 0, dW, dH), data2 = img2.data;
-            for (var j = 0; j < dH; j++) {
-                for (var i = 0; i < dW; i++) {
-                    var x2 = (i + j * dW) * 4, weight = 0, weights = 0, weightsAlpha = 0, gxR = 0, gxG = 0, gxB = 0, gxA = 0, centerY = (j + .5) * ratioH;
-                    for (var yy = floor(j * ratioH); yy < (j + 1) * ratioH; yy++) {
-                        var dy = abs(centerY - (yy + .5)) / ratioHHalf, centerX = (i + .5) * ratioW, w0 = dy * dy;
-                        for (var xx = floor(i * ratioW); xx < (i + 1) * ratioW; xx++) {
-                            var dx = abs(centerX - (xx + .5)) / ratioWHalf, w = sqrt(w0 + dx * dx);
-                            if (w > 1 && w < -1) {
-                                continue;
-                            }
-                            weight = 2 * w * w * w - 3 * w * w + 1;
-                            if (weight > 0) {
-                                dx = 4 * (xx + yy * oW);
-                                gxA += weight * data[dx + 3];
-                                weightsAlpha += weight;
-                                if (data[dx + 3] < 255) {
-                                    weight = weight * data[dx + 3] / 250;
-                                }
-                                gxR += weight * data[dx];
-                                gxG += weight * data[dx + 1];
-                                gxB += weight * data[dx + 2];
-                                weights += weight;
-                            }
-                        }
-                    }
-                    data2[x2] = gxR / weights;
-                    data2[x2 + 1] = gxG / weights;
-                    data2[x2 + 2] = gxB / weights;
-                    data2[x2 + 3] = gxA / weightsAlpha;
-                }
-            }
-            return img2;
-        },
-        toObject: function() {
-            return {
-                type: this.type,
-                scaleX: this.scaleX,
-                scaleY: this.scaleY,
-                resizeType: this.resizeType,
-                lanczosLobes: this.lanczosLobes
-            };
-        }
-    });
-    fabric.Image.filters.Resize.fromObject = function(object) {
-        return new fabric.Image.filters.Resize(object);
-    };
 })(typeof exports !== "undefined" ? exports : this);
 
 (function(global) {
@@ -11421,469 +12037,6 @@ fabric.util.object.extend(fabric.IText.prototype, {
             return [ '			<tspan x="', toFixed(lineLeftOffset + charOffset, NUM_FRACTION_DIGITS), '" y="', toFixed(lineTopOffset - this.height / 2, NUM_FRACTION_DIGITS), '" ', styleDecl.fontFamily ? 'font-family="' + styleDecl.fontFamily.replace(/"/g, "'") + '" ' : "", styleDecl.fontSize ? 'font-size="' + styleDecl.fontSize + '" ' : "", styleDecl.fontStyle ? 'font-style="' + styleDecl.fontStyle + '" ' : "", styleDecl.fontWeight ? 'font-weight="' + styleDecl.fontWeight + '" ' : "", styleDecl.textDecoration ? 'text-decoration="' + styleDecl.textDecoration + '" ' : "", 'style="', fillStyles, '">', fabric.util.string.escapeXml(_char), "</tspan>\n" ].join("");
         }
     });
-})();
-
-(function(global) {
-    "use strict";
-    var fabric = global.fabric || (global.fabric = {}), clone = fabric.util.object.clone;
-    fabric.Textbox = fabric.util.createClass(fabric.IText, fabric.Observable, {
-        type: "textbox",
-        minWidth: 20,
-        dynamicMinWidth: 0,
-        __cachedLines: null,
-        initialize: function(text, options) {
-            this.ctx = fabric.util.createCanvasElement().getContext("2d");
-            this.callSuper("initialize", text, options);
-            this.set({
-                lockUniScaling: false,
-                lockScalingY: true,
-                lockScalingFlip: true,
-                hasBorders: true
-            });
-            this.setControlsVisibility(fabric.Textbox.getTextboxControlVisibility());
-            this._dimensionAffectingProps.width = true;
-        },
-        _initDimensions: function(ctx) {
-            if (this.__skipDimension) {
-                return;
-            }
-            if (!ctx) {
-                ctx = fabric.util.createCanvasElement().getContext("2d");
-                this._setTextStyles(ctx);
-            }
-            this.dynamicMinWidth = 0;
-            this._textLines = this._splitTextIntoLines();
-            if (this.dynamicMinWidth > this.width) {
-                this._set("width", this.dynamicMinWidth);
-            }
-            this._clearCache();
-            this.height = this._getTextHeight(ctx);
-        },
-        _generateStyleMap: function() {
-            var realLineCount = 0, realLineCharCount = 0, charCount = 0, map = {};
-            for (var i = 0; i < this._textLines.length; i++) {
-                if (this.text[charCount] === "\n") {
-                    realLineCharCount = 0;
-                    charCount++;
-                    realLineCount++;
-                } else if (this.text[charCount] === " ") {
-                    realLineCharCount++;
-                    charCount++;
-                }
-                map[i] = {
-                    line: realLineCount,
-                    offset: realLineCharCount
-                };
-                charCount += this._textLines[i].length;
-                realLineCharCount += this._textLines[i].length;
-            }
-            return map;
-        },
-        _getStyleDeclaration: function(lineIndex, charIndex, returnCloneOrEmpty) {
-            if (this._styleMap) {
-                var map = this._styleMap[lineIndex];
-                if (!map) {
-                    return returnCloneOrEmpty ? {} : null;
-                }
-                lineIndex = map.line;
-                charIndex = map.offset + charIndex;
-            }
-            return this.callSuper("_getStyleDeclaration", lineIndex, charIndex, returnCloneOrEmpty);
-        },
-        _setStyleDeclaration: function(lineIndex, charIndex, style) {
-            var map = this._styleMap[lineIndex];
-            lineIndex = map.line;
-            charIndex = map.offset + charIndex;
-            this.styles[lineIndex][charIndex] = style;
-        },
-        _deleteStyleDeclaration: function(lineIndex, charIndex) {
-            var map = this._styleMap[lineIndex];
-            lineIndex = map.line;
-            charIndex = map.offset + charIndex;
-            delete this.styles[lineIndex][charIndex];
-        },
-        _getLineStyle: function(lineIndex) {
-            var map = this._styleMap[lineIndex];
-            return this.styles[map.line];
-        },
-        _setLineStyle: function(lineIndex, style) {
-            var map = this._styleMap[lineIndex];
-            this.styles[map.line] = style;
-        },
-        _deleteLineStyle: function(lineIndex) {
-            var map = this._styleMap[lineIndex];
-            delete this.styles[map.line];
-        },
-        _wrapText: function(ctx, text) {
-            var lines = text.split(this._reNewline), wrapped = [], i;
-            for (i = 0; i < lines.length; i++) {
-                wrapped = wrapped.concat(this._wrapLine(ctx, lines[i], i));
-            }
-            return wrapped;
-        },
-        _measureText: function(ctx, text, lineIndex, charOffset) {
-            var width = 0;
-            charOffset = charOffset || 0;
-            for (var i = 0, len = text.length; i < len; i++) {
-                width += this._getWidthOfChar(ctx, text[i], lineIndex, i + charOffset);
-            }
-            return width;
-        },
-        _wrapLine: function(ctx, text, lineIndex) {
-            var lineWidth = 0, lines = [], line = "", words = text.split(" "), word = "", offset = 0, infix = " ", wordWidth = 0, infixWidth = 0, largestWordWidth = 0, lineJustStarted = true;
-            for (var i = 0; i < words.length; i++) {
-                word = words[i];
-                wordWidth = this._measureText(ctx, word, lineIndex, offset);
-                offset += word.length;
-                lineWidth += infixWidth + wordWidth;
-                if (lineWidth >= this.width && !lineJustStarted) {
-                    lines.push(line);
-                    line = "";
-                    lineWidth = wordWidth;
-                    lineJustStarted = true;
-                }
-                if (!lineJustStarted) {
-                    line += infix;
-                }
-                line += word;
-                infixWidth = this._measureText(ctx, infix, lineIndex, offset);
-                offset++;
-                lineJustStarted = false;
-                if (wordWidth > largestWordWidth) {
-                    largestWordWidth = wordWidth;
-                }
-            }
-            i && lines.push(line);
-            if (largestWordWidth > this.dynamicMinWidth) {
-                this.dynamicMinWidth = largestWordWidth;
-            }
-            return lines;
-        },
-        _splitTextIntoLines: function() {
-            var originalAlign = this.textAlign;
-            this.ctx.save();
-            this._setTextStyles(this.ctx);
-            this.textAlign = "left";
-            var lines = this._wrapText(this.ctx, this.text);
-            this.textAlign = originalAlign;
-            this.ctx.restore();
-            this._textLines = lines;
-            this._styleMap = this._generateStyleMap();
-            return lines;
-        },
-        setOnGroup: function(key, value) {
-            if (key === "scaleX") {
-                this.set("scaleX", Math.abs(1 / value));
-                this.set("width", this.get("width") * value / (typeof this.__oldScaleX === "undefined" ? 1 : this.__oldScaleX));
-                this.__oldScaleX = value;
-            }
-        },
-        get2DCursorLocation: function(selectionStart) {
-            if (typeof selectionStart === "undefined") {
-                selectionStart = this.selectionStart;
-            }
-            var numLines = this._textLines.length, removed = 0;
-            for (var i = 0; i < numLines; i++) {
-                var line = this._textLines[i], lineLen = line.length;
-                if (selectionStart <= removed + lineLen) {
-                    return {
-                        lineIndex: i,
-                        charIndex: selectionStart - removed
-                    };
-                }
-                removed += lineLen;
-                if (this.text[removed] === "\n" || this.text[removed] === " ") {
-                    removed++;
-                }
-            }
-            return {
-                lineIndex: numLines - 1,
-                charIndex: this._textLines[numLines - 1].length
-            };
-        },
-        _getCursorBoundariesOffsets: function(chars, typeOfBoundaries) {
-            var topOffset = 0, leftOffset = 0, cursorLocation = this.get2DCursorLocation(), lineChars = this._textLines[cursorLocation.lineIndex].split(""), lineLeftOffset = this._getLineLeftOffset(this._getLineWidth(this.ctx, cursorLocation.lineIndex));
-            for (var i = 0; i < cursorLocation.charIndex; i++) {
-                leftOffset += this._getWidthOfChar(this.ctx, lineChars[i], cursorLocation.lineIndex, i);
-            }
-            for (i = 0; i < cursorLocation.lineIndex; i++) {
-                topOffset += this._getHeightOfLine(this.ctx, i);
-            }
-            if (typeOfBoundaries === "cursor") {
-                topOffset += (1 - this._fontSizeFraction) * this._getHeightOfLine(this.ctx, cursorLocation.lineIndex) / this.lineHeight - this.getCurrentCharFontSize(cursorLocation.lineIndex, cursorLocation.charIndex) * (1 - this._fontSizeFraction);
-            }
-            return {
-                top: topOffset,
-                left: leftOffset,
-                lineLeft: lineLeftOffset
-            };
-        },
-        getMinWidth: function() {
-            return Math.max(this.minWidth, this.dynamicMinWidth);
-        },
-        toObject: function(propertiesToInclude) {
-            return fabric.util.object.extend(this.callSuper("toObject", propertiesToInclude), {
-                minWidth: this.minWidth
-            });
-        }
-    });
-    fabric.Textbox.fromObject = function(object) {
-        return new fabric.Textbox(object.text, clone(object));
-    };
-    fabric.Textbox.getTextboxControlVisibility = function() {
-        return {
-            tl: false,
-            tr: false,
-            br: false,
-            bl: false,
-            ml: true,
-            mt: false,
-            mr: true,
-            mb: false,
-            mtr: true
-        };
-    };
-    fabric.Textbox.instances = [];
-})(typeof exports !== "undefined" ? exports : this);
-
-(function() {
-    var setObjectScaleOverridden = fabric.Canvas.prototype._setObjectScale;
-    fabric.Canvas.prototype._setObjectScale = function(localMouse, transform, lockScalingX, lockScalingY, by, lockScalingFlip, _dim) {
-        var t = transform.target;
-        if (t instanceof fabric.Textbox) {
-            var w = t.width * (localMouse.x / transform.scaleX / (t.width + t.strokeWidth));
-            if (w >= t.getMinWidth()) {
-                t.set("width", w);
-                return true;
-            }
-        } else {
-            return setObjectScaleOverridden.call(fabric.Canvas.prototype, localMouse, transform, lockScalingX, lockScalingY, by, lockScalingFlip, _dim);
-        }
-    };
-    fabric.Group.prototype._refreshControlsVisibility = function() {
-        if (typeof fabric.Textbox === "undefined") {
-            return;
-        }
-        for (var i = this._objects.length; i--; ) {
-            if (this._objects[i] instanceof fabric.Textbox) {
-                this.setControlsVisibility(fabric.Textbox.getTextboxControlVisibility());
-                return;
-            }
-        }
-    };
-    var clone = fabric.util.object.clone;
-    fabric.util.object.extend(fabric.Textbox.prototype, {
-        _removeExtraneousStyles: function() {
-            for (var prop in this._styleMap) {
-                if (!this._textLines[prop]) {
-                    delete this.styles[this._styleMap[prop].line];
-                }
-            }
-        },
-        insertCharStyleObject: function(lineIndex, charIndex, style) {
-            var map = this._styleMap[lineIndex];
-            lineIndex = map.line;
-            charIndex = map.offset + charIndex;
-            fabric.IText.prototype.insertCharStyleObject.apply(this, [ lineIndex, charIndex, style ]);
-        },
-        insertNewlineStyleObject: function(lineIndex, charIndex, isEndOfLine) {
-            var map = this._styleMap[lineIndex];
-            lineIndex = map.line;
-            charIndex = map.offset + charIndex;
-            fabric.IText.prototype.insertNewlineStyleObject.apply(this, [ lineIndex, charIndex, isEndOfLine ]);
-        },
-        shiftLineStyles: function(lineIndex, offset) {
-            var clonedStyles = clone(this.styles), map = this._styleMap[lineIndex];
-            lineIndex = map.line;
-            for (var line in this.styles) {
-                var numericLine = parseInt(line, 10);
-                if (numericLine > lineIndex) {
-                    this.styles[numericLine + offset] = clonedStyles[numericLine];
-                    if (!clonedStyles[numericLine - offset]) {
-                        delete this.styles[numericLine];
-                    }
-                }
-            }
-        },
-        _getTextOnPreviousLine: function(lIndex) {
-            var textOnPreviousLine = this._textLines[lIndex - 1];
-            while (this._styleMap[lIndex - 2] && this._styleMap[lIndex - 2].line === this._styleMap[lIndex - 1].line) {
-                textOnPreviousLine = this._textLines[lIndex - 2] + textOnPreviousLine;
-                lIndex--;
-            }
-            return textOnPreviousLine;
-        },
-        removeStyleObject: function(isBeginningOfLine, index) {
-            var cursorLocation = this.get2DCursorLocation(index), map = this._styleMap[cursorLocation.lineIndex], lineIndex = map.line, charIndex = map.offset + cursorLocation.charIndex;
-            this._removeStyleObject(isBeginningOfLine, cursorLocation, lineIndex, charIndex);
-        }
-    });
-})();
-
-(function() {
-    var override = fabric.IText.prototype._getNewSelectionStartFromOffset;
-    fabric.IText.prototype._getNewSelectionStartFromOffset = function(mouseOffset, prevWidth, width, index, jlen) {
-        index = override.call(this, mouseOffset, prevWidth, width, index, jlen);
-        var tmp = 0, removed = 0;
-        for (var i = 0; i < this._textLines.length; i++) {
-            tmp += this._textLines[i].length;
-            if (tmp + removed >= index) {
-                break;
-            }
-            if (this.text[tmp + removed] === "\n" || this.text[tmp + removed] === " ") {
-                removed++;
-            }
-        }
-        return index - i + removed;
-    };
-})();
-
-(function() {
-    if (typeof document !== "undefined" && typeof window !== "undefined") {
-        return;
-    }
-    var DOMParser = require("xmldom").DOMParser, URL = require("url"), HTTP = require("http"), HTTPS = require("https"), Canvas = require("canvas"), Image = require("canvas").Image;
-    function request(url, encoding, callback) {
-        var oURL = URL.parse(url);
-        if (!oURL.port) {
-            oURL.port = oURL.protocol.indexOf("https:") === 0 ? 443 : 80;
-        }
-        var reqHandler = oURL.protocol.indexOf("https:") === 0 ? HTTPS : HTTP, req = reqHandler.request({
-            hostname: oURL.hostname,
-            port: oURL.port,
-            path: oURL.path,
-            method: "GET"
-        }, function(response) {
-            var body = "";
-            if (encoding) {
-                response.setEncoding(encoding);
-            }
-            response.on("end", function() {
-                callback(body);
-            });
-            response.on("data", function(chunk) {
-                if (response.statusCode === 200) {
-                    body += chunk;
-                }
-            });
-        });
-        req.on("error", function(err) {
-            if (err.errno === process.ECONNREFUSED) {
-                fabric.log("ECONNREFUSED: connection refused to " + oURL.hostname + ":" + oURL.port);
-            } else {
-                fabric.log(err.message);
-            }
-            callback(null);
-        });
-        req.end();
-    }
-    function requestFs(path, callback) {
-        var fs = require("fs");
-        fs.readFile(path, function(err, data) {
-            if (err) {
-                fabric.log(err);
-                throw err;
-            } else {
-                callback(data);
-            }
-        });
-    }
-    fabric.util.loadImage = function(url, callback, context) {
-        function createImageAndCallBack(data) {
-            if (data) {
-                img.src = new Buffer(data, "binary");
-                img._src = url;
-                callback && callback.call(context, img);
-            } else {
-                img = null;
-                callback && callback.call(context, null, true);
-            }
-        }
-        var img = new Image();
-        if (url && (url instanceof Buffer || url.indexOf("data") === 0)) {
-            img.src = img._src = url;
-            callback && callback.call(context, img);
-        } else if (url && url.indexOf("http") !== 0) {
-            requestFs(url, createImageAndCallBack);
-        } else if (url) {
-            request(url, "binary", createImageAndCallBack);
-        } else {
-            callback && callback.call(context, url);
-        }
-    };
-    fabric.loadSVGFromURL = function(url, callback, reviver) {
-        url = url.replace(/^\n\s*/, "").replace(/\?.*$/, "").trim();
-        if (url.indexOf("http") !== 0) {
-            requestFs(url, function(body) {
-                fabric.loadSVGFromString(body.toString(), callback, reviver);
-            });
-        } else {
-            request(url, "", function(body) {
-                fabric.loadSVGFromString(body, callback, reviver);
-            });
-        }
-    };
-    fabric.loadSVGFromString = function(string, callback, reviver) {
-        var doc = new DOMParser().parseFromString(string);
-        fabric.parseSVGDocument(doc.documentElement, function(results, options) {
-            callback && callback(results, options);
-        }, reviver);
-    };
-    fabric.util.getScript = function(url, callback) {
-        request(url, "", function(body) {
-            eval(body);
-            callback && callback();
-        });
-    };
-    fabric.Image.fromObject = function(object, callback) {
-        fabric.util.loadImage(object.src, function(img) {
-            var oImg = new fabric.Image(img);
-            oImg._initConfig(object);
-            oImg._initFilters(object.filters, function(filters) {
-                oImg.filters = filters || [];
-                oImg._initFilters(object.resizeFilters, function(resizeFilters) {
-                    oImg.resizeFilters = resizeFilters || [];
-                    callback && callback(oImg);
-                });
-            });
-        });
-    };
-    fabric.createCanvasForNode = function(width, height, options, nodeCanvasOptions) {
-        nodeCanvasOptions = nodeCanvasOptions || options;
-        var canvasEl = fabric.document.createElement("canvas"), nodeCanvas = new Canvas(width || 600, height || 600, nodeCanvasOptions);
-        canvasEl.style = {};
-        canvasEl.width = nodeCanvas.width;
-        canvasEl.height = nodeCanvas.height;
-        var FabricCanvas = fabric.Canvas || fabric.StaticCanvas, fabricCanvas = new FabricCanvas(canvasEl, options);
-        fabricCanvas.contextContainer = nodeCanvas.getContext("2d");
-        fabricCanvas.nodeCanvas = nodeCanvas;
-        fabricCanvas.Font = Canvas.Font;
-        return fabricCanvas;
-    };
-    fabric.StaticCanvas.prototype.createPNGStream = function() {
-        return this.nodeCanvas.createPNGStream();
-    };
-    fabric.StaticCanvas.prototype.createJPEGStream = function(opts) {
-        return this.nodeCanvas.createJPEGStream(opts);
-    };
-    var origSetWidth = fabric.StaticCanvas.prototype.setWidth;
-    fabric.StaticCanvas.prototype.setWidth = function(width, options) {
-        origSetWidth.call(this, width, options);
-        this.nodeCanvas.width = width;
-        return this;
-    };
-    if (fabric.Canvas) {
-        fabric.Canvas.prototype.setWidth = fabric.StaticCanvas.prototype.setWidth;
-    }
-    var origSetHeight = fabric.StaticCanvas.prototype.setHeight;
-    fabric.StaticCanvas.prototype.setHeight = function(height, options) {
-        origSetHeight.call(this, height, options);
-        this.nodeCanvas.height = height;
-        return this;
-    };
-    if (fabric.Canvas) {
-        fabric.Canvas.prototype.setHeight = fabric.StaticCanvas.prototype.setHeight;
-    }
 })();
 
 window.fabric = fabric;
